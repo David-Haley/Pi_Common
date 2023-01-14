@@ -1,0 +1,2 @@
+# Pi_Common
+This repository contains a number of Ada packages that alloww basic access to the RPi GPIO and SPI. In addition there are drivers for the Analogue Devices AD7902R2 two channel ADC and the Texas Instruments TIC5940 sixteen channel PWM LED driver. Note a C language driver (see Pi_Common_C) is required for the SPI interface and the AD7902 requires hardware (monostable etc) to reduce the read pulse width from the minimum pulse width available through the file system GPIO to the 500 ns required for the ADC.
