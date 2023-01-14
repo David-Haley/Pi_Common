@@ -1,0 +1,23 @@
+project Build_All is
+   for Languages    use ("Ada", "C");
+   for Source_Dirs use ("./src", "../DJH/src",
+                        "../Pi_Common_C/src");
+   for Object_Dir use "./obj";
+   for Exec_Dir use "./obj";
+   for Main use ("test_tlc5940.adb", "test_spi.adb", "test_gpio.adb", "test_ansi.adb");
+                 
+   package Naming is
+      for Specification_Suffix ("C") use ".h";
+      for Implementation_Suffix ("C") use ".c";
+   end Naming;
+
+   package Compiler is
+     for Default_Switches ("Ada") use ("-g");
+     for Default_Switches ("C") use ("-g", "-pedantic");
+   end Compiler;
+
+   package Linker is
+      for Linker_Options use ("-g", "-v");
+   end Linker;
+
+end Build_All;
