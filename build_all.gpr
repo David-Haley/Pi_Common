@@ -4,7 +4,7 @@ project Build_All is
                         "../Pi_Common_C/src");
    for Object_Dir use "./obj";
    for Exec_Dir use "./obj";
-   for Main use ("test_tlc5940.adb", "test_spi.adb", "test_gpio.adb", "test_ansi.adb");
+   for Main use ("test_tlc5940.adb", "test_i2c.adb", "test_spi.adb", "test_gpio.adb", "test_ansi.adb", "test_dfr0555_display.adb");
                  
    package Naming is
       for Specification_Suffix ("C") use ".h";
