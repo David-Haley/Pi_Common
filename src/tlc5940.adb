@@ -17,8 +17,9 @@
 
 -- Author    : David Haley
 -- Created   : 08/08/2017
--- Last Edit : 09/06/2022
+-- Last Edit : 13/06/2022
 
+-- 20250513 : Update the ambient light comparison each LED_write and tidy up.
 -- 20220609 : Converted to use SPI_Interface directly called C.
 -- 20220127 : Calculation of optocoupler time constant resulted in the one bit
 -- settling time being changed to 1.424 ms.
@@ -101,7 +102,7 @@ package  body TLC5940 is
 
    DC_Table : constant array (LED_Channels) of DC_Table_Element :=
      (
-        (11, 11), (11, 10), (10, 09), (09, 09),
+      (11, 11), (11, 10), (10, 09), (09, 09),
       (08, 08), (08, 07), (07, 06), (06, 06),
       (05, 05), (05, 04), (04, 03), (03, 03),
       (02, 02), (02, 01), (01, 00), (00, 00)
@@ -171,8 +172,6 @@ package  body TLC5940 is
                               Channel : in LED_Channels;
                               Comparitor : in GPIO_Pins);
 
-      procedure AL_Write_LEDs;
-
       function AL_Current_Result return Greyscales;
 
       -- Seven segment -isplay management subprograms
@@ -206,7 +205,7 @@ package  body TLC5940 is
       Output_Enabled : Boolean := False;
       Initialised : Boolean := False;
       First_LED_Write : Boolean := True;
-      Settled : Time;
+      Settled : Time := Clock; -- Just to ensure it has a sane initial value.
       Light_Value : Greyscales := Greyscales'Last / 2;
       -- Default value available even if the measurement system has not been
       -- iniatialised.
@@ -214,6 +213,8 @@ package  body TLC5940 is
 
       -- Seven Segment Display buffer
       Display_Buffer : Display_Buffers;
+
+      procedure AL_Write_LEDs;
 
    end Display_State;
 
@@ -268,7 +269,7 @@ package  body TLC5940 is
       -- Transfers the greyscale data to all the cascaded chips.
 
    begin -- Write_LEDs
-      Display_State. Write_LEDs;
+      Display_State.Write_LEDs;
    end Write_LEDs;
 
    procedure Blank_LEDs is
@@ -298,9 +299,11 @@ package  body TLC5940 is
    procedure Initialise_Ambient_Light (Chip : in Chips;
                                        Channel : in LED_Channels;
                                        Comparitor : GPIO_Pins := Gen4) is
-      -- Initialises the measurement system Chip and Channel define the PWM output
-      -- used to implement the neasurement. Comparitor defined the RPI input pin
-      -- used to read the output from ambient light measurement bridge comparitor.
+                                       
+      -- Initialises the measurement system Chip and Channel define the PWM
+      -- output used to implement the neasurement. Comparitor defined the RPI
+      -- GPIO pin used to read the output from ambient light measurement bridge
+      -- comparitor.
 
    begin -- Initialise_Ambient_Light
       Display_State.AL_Initalise (Chip, Channel, Comparitor);
@@ -394,7 +397,8 @@ package  body TLC5940 is
             Buffer_Array (Chip).DC_TX (DC_Table (LED_Channel).First_Byte) :=
               First_Byte;
          when others =>
-            null; -- should be unreachable
+            raise Program_Error with "Set_Correction erroneous case value!";
+            -- others need to keep the compiler happy
          end case; -- LED_Channel mod 4
       end Set_Correction;
 
@@ -637,9 +641,10 @@ package  body TLC5940 is
                end if; -- Test_Mask = 0
                Set_Greyscale (Device, Output_Channel, Test_Value);
                Settled := Clock + Settling_Time;
+            else
+               Set_Greyscale (Device, Output_Channel, Test_Value);
+               -- rewrites the same value guarantee the correct value is used.
             end if; -- First_LED_Write
-            -- Do nothing if it was not the first write and insufficient
-            -- settling time has elapsed
          end if; -- Initialied and Output_Enabled
          -- do nothing if there has been no previous output setup
       end AL_Write_LEDs;
