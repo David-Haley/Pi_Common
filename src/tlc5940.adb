@@ -17,8 +17,10 @@
 
 -- Author    : David Haley
 -- Created   : 08/08/2017
--- Last Edit : 13/06/2022
+-- Last Edit : 14/06/2022
 
+-- 20250514 : Renaming of AL_Write_LEDs to AL_Write_LED, recuced Settling time
+-- to reflect new calculated time.
 -- 20250513 : Update the ambient light comparison each LED_write and tidy up.
 -- 20220609 : Converted to use SPI_Interface directly called C.
 -- 20220127 : Calculation of optocoupler time constant resulted in the one bit
@@ -115,9 +117,10 @@ package  body TLC5940 is
    DC_2_Hi_Mask : constant Unsigned_8 := 2#00000011#;
    DC_3_Mask    : constant Unsigned_8 := 2#11111100#;
 
-   Settling_Time : constant Time_Span := Milliseconds (1424);
-   -- Settling time was recalculated based on a time constant of 2.4s giving a
-   -- 1/2048 decay of approximately 17 s or 1.424 s.
+   Settling_Time : constant Time_Span := Milliseconds (1250);
+   -- Settling time was recalculated based on a time constant of 100 ms giving a
+   -- 1/2048 decay of 763 ms. The new value of 1.25 s guarantee accuracy and
+   -- a "neat" time for the twelve steps of 15s.
    Start_Mask : constant  Greyscales := 2#0000100000000000#;
 
    type Displays is record
@@ -214,7 +217,7 @@ package  body TLC5940 is
       -- Seven Segment Display buffer
       Display_Buffer : Display_Buffers;
 
-      procedure AL_Write_LEDs;
+      procedure AL_Write_LED;
 
    end Display_State;
 
@@ -550,7 +553,7 @@ package  body TLC5940 is
 
       begin -- Write_LEDs
          -- Assumes VPRG_Pin and XLAT_Pin low on entry
-         AL_Write_LEDs;
+         AL_Write_LED;
          loop -- repeat transfer
             for I in reverse Chips loop
                -- first chip in string, last sent!
@@ -615,9 +618,9 @@ package  body TLC5940 is
          Initialised := True;
       end  AL_Initalise;
 
-      procedure AL_Write_LEDs is
+      procedure AL_Write_LED is
 
-      begin -- AL_Write_LEDs
+      begin -- AL_Write_LED
          if Initialised and Output_Enabled then
             if First_LED_Write then
                Test_Value := Start_Mask;
@@ -647,7 +650,7 @@ package  body TLC5940 is
             end if; -- First_LED_Write
          end if; -- Initialied and Output_Enabled
          -- do nothing if there has been no previous output setup
-      end AL_Write_LEDs;
+      end AL_Write_LED;
 
       function AL_Current_Result return Greyscales is
 
