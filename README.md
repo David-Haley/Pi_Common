@@ -2,7 +2,7 @@
 This repository contains a number of Ada packages that allow basic access to the RPi GPIO I2C and SPI.
 
 ## RPI_GPIO Package
-Allows basic operations on the the Raspberry Pi GPIO pins as both parallel inpit and output.
+Allows basic operations on the the Raspberry Pi GPIO pins as both parallel input and output. Previoulsy used file system IO which is deprecated, now uses libgpiod. When using gprbuild a seperate project file is required for this library, see libgpiod.gpr and build_all.gpr. In build_all.gpr note the "with" clause and the linker -lgpiod.
 
 ## I2C
 The file i2c_interface.ads provides a binding for the I2C driver in the PI_Common_C repository. The package DFR0555_Display provides an example of how to use the I2C interface.
