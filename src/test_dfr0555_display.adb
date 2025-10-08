@@ -1,7 +1,9 @@
 -- test program for DFRobot 0555 (2 x 16) display.
 -- Author:    David Haley
 -- Created:   07/03/2023
--- Last Edit: 15/03/2023
+-- Last Edit: 08/10/2025
+
+-- 20251008 : Spelling corections and tidy up.
 
 with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Characters.Handling; use Ada.Characters.Handling;
@@ -67,10 +69,11 @@ procedure Test_DFR0555_Display is
    end Put_String;
 
 begin -- Test_DFR0555_Display
+   Put_Line ("Test_DFR0555_Display version 20251008");
    DFR0555_Display.Enable_Display;
    loop -- One test
       Put_Line ("A Set Brightness");
-      Put_Line ("B Gacklight on");
+      Put_Line ("B Backlight on");
       Put_Line ("C Backlight off");
       Put_Line ("D Clear display");
       Put_Line ("E Display test message");
