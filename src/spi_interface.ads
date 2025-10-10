@@ -1,5 +1,6 @@
 pragma Ada_2012;
 pragma Style_Checks (Off);
+pragma Warnings (Off, "-gnatwu");
 
 with interfaces; use Interfaces;
 with Interfaces.C; use Interfaces.C;
@@ -8,12 +9,12 @@ package spi_interface is
 
   -- An interface to RPI Linux SPI device intended to be callable from Ada.
   -- Copied from an example on the RPi forum.
-  -- Maimly automativally generated interface to SPI_Driber implemented in C.
+  -- Mainly automativally generated interface to spi_driver.c
   -- Author    : David Haley
   -- Created   : 29/04/2022
-  -- Last Edit : 30/04/2022
-  -- 20220430: Renamed spi_interface buffer type changed to Unsigned_8,
-  -- suptype limits added
+  -- Last Edit : 11/10/2025
+  -- 20251011: Check on word length added
+  -- 20220490: Comments corrected
 
    subtype SPI_Devices is unsigned_char range 0 .. 1;
    subtype SPI_Modes is unsigned_char range 0 .. 3;
@@ -22,7 +23,7 @@ package spi_interface is
    function SPI_Open
      (SPI_Device : SPI_Devices;
       Mode : SPI_Modes;
-      Speed : SPI_Speeds) return int  -- spi_driver.h:8
+      Speed : SPI_Speeds) return int  -- spi_driver.h:9
    with Import => True, 
         Convention => C, 
         External_Name => "SPI_Open";
@@ -38,7 +39,7 @@ package spi_interface is
   -- -3: Unknown SPI mode requested
   -- -4: Error setting Mode
   -- -5: Bad speed requested
-  
+  -- -6: Word length not set correctly
    function SPI_Transfer
      (Tx_Buffer : access Unsigned_8;
       Rx_Buffer : access Unsigned_8;
@@ -67,3 +68,6 @@ package spi_interface is
   -- Non zero values are the error code returned from call to close
   
 end spi_interface;
+
+pragma Style_Checks (On);
+pragma Warnings (On, "-gnatwu");
