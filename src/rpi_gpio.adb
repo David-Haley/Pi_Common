@@ -3,18 +3,21 @@ with GPIO_Driver_h; use GPIO_Driver_h;
 with Interfaces.C; use Interfaces.C;
 with Interfaces.C.Strings; use Interfaces.C.Strings;
 
--- Author    : David Haley
--- Created   : 31/07/2017
--- Last Edit : 02/08/2025
 -- Allows basic operations on the the Raspberry Pi GPIO pins as both
 -- parallel input and output.
+
+-- Author    : David Haley
+-- Created   : 31/07/2017
+-- Last Edit : 19/02/2026
+-- 20260219 : Ported to ues libgpio version 2, Chip_Name changef from
+-- "gpiochip0" to "/dev/gpiochip0"
 -- 20250802 : Ported to use C interface to libgpiod.
 -- 20220508 : Added Initialization and general rewrite.
 -- 20190714 : Finalization is only required if one or more pins have been bound
 
 package body RPi_GPIO is
 
-   Chip_Name : constant chars_ptr := New_String ("gpiochip0");
+   Chip_Name : constant chars_ptr := New_String ("/dev/gpiochip0");
    Invalid_Line : constant Interfaces.C.int := -1;
 
    type GPIO is record
