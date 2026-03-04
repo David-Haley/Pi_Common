@@ -34,3 +34,11 @@ Provides comprehensive control over the DFRobot sixteen character two line displ
 The back light can be turned on, off and have its brightness controlled.
 
 The cursor can be positioned, be visible or hidden. writing of full lines, single characters or strings is provided.
+
+## MQTT.Subcriber Package
+Provides a simple MQTT subscriber which returns either a String or binary data. It depends on libmosquitto and operates asynchronously internally queueing messages. The interface is blocking, the Receive function will not return if there is no message in the queue.
+A thin Ada binding to libmosquitto is provided by mqtt_library.ads, mostly automatically generated but some editing has been done to make it more or less self contained.
+
+## Machine_Properties Package
+
+At present provides the host mame of the machine running the application.

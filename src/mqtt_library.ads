@@ -2,7 +2,8 @@
 --  Command g++ -c -fdump-ada-spec -C /usr/include/mosquitto.h
 --  Modified  : David Haley
 --  Created   : 15/02/2025
---  Last Edit : 16/02/2025  
+--  Last Edit : 01/03/2025
+--  20260301 : package name changed to MQTT_Library.  
 
 pragma Ada_2012;
 
@@ -14,7 +15,7 @@ with Interfaces.C.Strings;
 with System;
 with Interfaces.C.Extensions;
 
-package mosquitto is
+package MQTT_Library is
    --  Taken from stddef.h
    subtype size_t is unsigned_long;
 
@@ -3797,7 +3798,7 @@ package mosquitto is
         Convention => C, 
         External_Name => "mosquitto_string_to_property_info";
 
-end mosquitto;
+end MQTT_Library;
 
 pragma Style_Checks (On);
 pragma Warnings (On, "-gnatwu");

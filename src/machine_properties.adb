@@ -1,13 +1,14 @@
 --  This package supports the retreival if some machine properties.
 --  Author    : David Haley
 --  Created   : 28/02/2026
---  Last Edit : 01/03/2026
+--  Last Edit : 04/03/2026
 
 pragma Ada_2012;
 
 pragma Style_Checks (Off);
 pragma Warnings (Off, "-gnatwu");
 
+with Ada.Strings.Fixed;
 with Interfaces.C; use Interfaces.C;
 with Interfaces.C.Strings; use Interfaces.C.Strings; 
 with System; use System;
@@ -22,17 +23,17 @@ package body Machine_Properties is
          External_Name => "gethostname";
 
    function Machine_Name return String is
-      --  Returns the name of the host machine.
 
-      Name_length : constant := 256;
+      --  Returns the name of the host machine or a null string on failure.
 
-      Buffer : char_array (0 .. Name_length - 1) := (others => ' ');
-      --  Not Actually used, just sets the size of returned result
+      Name_Length : constant := 256;
+
       Result_Pointer : chars_ptr;
       Return_Code : int;
 
    begin -- Machine_Name
-      Result_Pointer := New_Char_array (Buffer);
+      Result_Pointer :=
+         New_String (Ada.Strings.Fixed."*" (Name_Length, ' '));
       Return_Code := get_host_name (Result_Pointer, Name_Length);
       if Return_Code = 0 then
          declare

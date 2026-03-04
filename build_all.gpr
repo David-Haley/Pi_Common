@@ -1,4 +1,5 @@
 with "libgpiod.gpr";
+with "lib_mosquitto.gpr";
 
 project Build_All is
 
@@ -9,7 +10,7 @@ project Build_All is
    for Exec_Dir use "./obj";
    for Main use ("test_tlc5940.adb", "test_i2c.adb", "test_spi.adb",
                  "test_gpio.adb", "test_ansi.adb", "test_dfr0555_display.adb",
-                 "test_machine_properties.adb");
+                 "test_machine_properties.adb", "test_mqtt_subscriber.adb");
                  
    package Naming is
       for Specification_Suffix ("C") use ".h";
