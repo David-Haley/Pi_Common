@@ -2,13 +2,13 @@
 
 --  Author    : David Haley
 --  Created   : 09/03/2026
---  Last_Edit : 13/03/2026
+--  Last_Edit : 17/03/2026
+
+-- 20260317: Redundant with for clause MQTT removed
 
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Containers.Ordered_Maps;
 with Ada.Task_Identification; use Ada.Task_Identification;
-with Ada.Unchecked_Conversion;
-with MQTT;
 with Unchecked_Conversion;
 with Unchecked_Deallocation;
 with Interfaces.C.Strings; use Interfaces.C.Strings;
