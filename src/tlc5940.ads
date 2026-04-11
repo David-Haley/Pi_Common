@@ -18,14 +18,15 @@
 
 -- Author    : David Haley
 -- Created   : 07/08/2017
--- Last Edit : 09/06/2022
+-- Last Edit : 24/03/2026
 
+--  20260324 : Provision for the display of the Latin_1 Characters
 -- 20220609 : Converted to use SPI_Interface directly called C.
 -- 20220118 : Implementation of protection on display state, potentially makes
 -- this package thread safe.
--- 20190718 : No Decimal made in parameter for Set_Digit
+-- 20190718 : No Decimal made in parameter for Set_Character
 -- 20190716 : Default comparitor pin changed to Gen4 to match Clock Hardware.
--- No Decimal implemented for Set_Digit
+-- No Decimal implemented for Set_Character
 -- 20190628 : some declarations transferred to Driver_Types
 -- 20190325 : Ambient light functionality added.
 -- 20190323 : Note with respect to concurrancy added and other corrections to
@@ -119,21 +120,21 @@ package TLC5940 is
    subtype Hex_Digits is Natural range 0 .. 16#0F#;
 
    Uninitialised_Digit : Exception;
-   -- Exception raised if Set_Digit, Get_Digit or Get_Decimal is called for
+   -- Exception raised if Set_Character, Get_Digit or Get_Decimal is called for
    -- a Display which has not been initialised by a call to Initialise_Digit;
 
    procedure Initialise_Digit (Display : in Display_7;
                                Chip : in Chips;
-                               Segment_Array : in Segment_Arrays);
+                               Segment_Array : in Segment_Arrays;
+                               No_Decimal : in Boolean := False);
+   -- Allows for LED_Chanel assigned to the DP to be used for another purpose
 
-   procedure Set_Digit (Display : in Display_7;
-                        Number : in Hex_Digits;
-                        Greyscale : in GreyScales := Greyscales'Last;
-                        Decimal_Lit : in Boolean := False;
-                        No_Decimal : in Boolean := False);
-   -- Allows for LED_Chanel assigneb to the DP to be used for another purpose
+   procedure Set_Character (Display : in Display_7;
+                            Char : in Character;
+                            Greyscale : in GreyScales := Greyscales'Last;
+                            Decimal_Lit : in Boolean := False);
 
-   function Get_Digit (Display : in Display_7) return Hex_Digits;
+   function Get_Character (Display : in Display_7) return Character;
 
    function Get_Decimal (Display : in Display_7) return Boolean;
 

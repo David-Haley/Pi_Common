@@ -17,9 +17,11 @@
 
 -- Author    : David Haley
 -- Created   : 08/08/2017
--- Last Edit : 14/06/2022
+-- Last Edit : 29/03/2026
 
--- 20250514 : Renaming of AL_Write_LEDs to AL_Write_LED, recuced Settling time
+--  20260329 : Provision for the display of the Latin_1 characters. All 
+--  characters valid, those not capable of display mapped to ' '.
+-- 20250514 : Renaming of AL_Write_LEDs to AL_Write_LED, reduced Settling time
 -- to reflect new calculated time.
 -- 20250513 : Update the ambient light comparison each LED_write and tidy up.
 -- 20220609 : Converted to use SPI_Interface directly called C.
@@ -28,15 +30,15 @@
 -- 20220118 : Implementation of protection on display state, potentially makes
 -- this package thread safe.
 -- 20221017 : comment corrected
--- 20190720 : Setting_Time changedd to 875ms.
+-- 20190720 : Setting_Time changed to 875ms.
 -- 20190716 : Default comparitor pin changed to Gen4 to match Clock Hardware.
--- No Decimal implemented for Set_Digit
+-- No Decimal implemented for Set_Character
 -- 20190326 : Ambient light functionality added.
 -- 20190324 : Order in which cascaded chip data sent corrected (reversed).
--- Repeated Grefscale SPI transfer added after correction setting see data
+-- Repeated Greyscale SPI transfer added after correction setting see data
 -- sheet.
 -- 20190323 : Note with respect to concurrance added and other corrections to
--- package desctiption.
+-- package description.
 -- 20190323 : Generic seven segment support added must be at least 1?
 -- 20190320 : Set_Correction corrected and Get_Correction implemented, delay
 -- inserted in set correction.
@@ -123,12 +125,121 @@ package  body TLC5940 is
    -- a "neat" time for the twelve steps of 15s.
    Start_Mask : constant  Greyscales := 2#0000100000000000#;
 
+         --   -a-
+         --   f b
+         --   -g-
+         --   e c
+         --   -d-Dp
+
+   Character_Map : constant array (Character, Segments) of Boolean :=
+      ( --      -a-    -b-    -c-    -d-    -e-    -f-    -g-     Dp
+      '"'  => (False,  True, False, False, False,  True, False, False),
+      '#'  => ( True, False, False,  True, False, False,  True, False),
+      '$'  => ( True, False,  True,  True, False,  True,  True, False),
+      '%'  => ( True, False,  True,  True, False,  True, False, False),
+      '!'  => (False,  True,  True, False, False, False, False,  True),
+      '&'  => (False, False, False, False,  True,  True,  True, False),
+      '''  => (False, False, False, False, False,  True, False, False),
+      '('  => ( True, False, False,  True,  True,  True, False, False),
+      ')'  => ( True,  True,  True,  True, False, False, False, False),
+      '*'  => (False, False,  True, False,  True, False, False, False),
+      '+'  => (False, False, False, False,  True,  True,  True, False),
+      ','  => (False, False,  True, False, False, False, False, False),
+      '-'  => (False, False, False, False, False, False,  True, False),
+      '.'  => (False, False, False, False, False, False, False,  True),
+      '/'  => (False,  True, False, False,  True, False,  True, False),
+      --        -a-    -b-    -c-    -d-    -e-    -f-    -g-     Dp
+      '0'  => ( True,  True,  True,  True,  True,  True, False, False),
+      '1'  => (False,  True,  True, False, False, False, False, False),
+      '2'  => ( True,  True, False,  True,  True, False,  True, False),
+      '3'  => ( True,  True,  True,  True, False, False,  True, False),
+      '4'  => (False,  True,  True, False, False,  True,  True, False),
+      '5'  => ( True, False,  True,  True, False,  True,  True, False),
+      '6'  => ( True, False,  True,  True,  True,  True,  True, False),
+      '7'  => ( True,  True,  True, False, False, False, False, False),
+      '8'  => ( True,  True,  True,  True,  True,  True,  True, False),
+      '9'  => ( True,  True,  True,  True, False,  True,  True, False),
+      --        -a-    -b-    -c-    -d-    -e-    -f-    -g-     Dp
+      '<'  => (False, False, False,  True,  True, False, False, False),
+      '='  => (False, False, False,  True, False, False,  True, False),
+      '>'  => (False, False,  True,  True, False, False, False, False),
+      '?'  => ( True,  True,  True, False, False,  True, False,  True),
+      --        -a-    -b-    -c-    -d-    -e-    -f-    -g-     Dp
+      'A'  => ( True,  True,  True, False,  True,  True,  True, False),
+      'B'  => (False, False,  True,  True,  True,  True,  True, False),
+      'C'  => (False, False, False,  True,  True, False,  True, False),
+      'D'  => (False,  True,  True,  True,  True, False,  True, False),
+      'E'  => ( True, False, False,  True,  True,  True,  True, False),
+      'F'  => ( True, False, False, False,  True,  True,  True, False),
+      'G'  => ( True, False,  True,  True,  True,  True, False, False),
+      'H'  => (False, False,  True, False,  True,  True,  True, False),
+      'I'  => (False,  True,  True, False, False, False, False, False),
+      'J'  => (False,  True,  True,  True,  True, False, False, False),
+      'K'  => (False,  True, False,  True,  True,  True,  True, False),
+      'L'  => (False, False, False,  True,  True,  True, False, False),
+      'M'  => ( True, False,  True, False,  True, False,  True, False),
+      'N'  => (False, False,  True, False,  True, False,  True, False),
+      'O'  => (False, False,  True,  True,  True, False,  True, False),
+      'P'  => ( True,  True, False, False,  True,  True,  True, False),
+      'Q'  => ( True,  True,  True, False, False,  True,  True, False),
+      'R'  => (False, False, False, False,  True, False,  True, False),
+      'S'  => ( True, False,  True,  True, False,  True,  True, False),
+      'T'  => (False, False, False,  True,  True,  True,  True, False),
+      'U'  => (False, False,  True,  True,  True, False, False, False),
+      'V'  => (False, False,  True,  True,  True, False, False, False),
+      'W'  => (False,  True, False,  True, False,  True,  True, False),
+      'X'  => (False, False,  True, False,  True, False, False, False),
+      'Y'  => (False,  True,  True,  True, False,  True,  True, False),
+      'Z'  => ( True,  True, False,  True,  True, False,  True, False),
+      --        -a-    -b-    -c-    -d-    -e-    -f-    -g-     Dp
+      '['  => ( True, False, False,  True,  True,  True, False, False),
+      '\'  => (False, False,  True, False, False,  True,  True, False),
+      ']'  => ( True,  True,  True,  True, False, False, False, False),
+      '^'  => ( True,  True, False, False, False,  True, False, False),
+      '_'  => (False, False, False,  True, False, False, False, False),
+      '`'  => (False, False, False, False, False,  True, False, False),
+      --        -a-    -b-    -c-    -d-    -e-    -f-    -g-     Dp
+      'a'  => ( True,  True,  True, False,  True,  True,  True, False),
+      'b'  => (False, False,  True,  True,  True,  True,  True, False),
+      'c'  => (False, False, False,  True,  True, False,  True, False),
+      'd'  => (False,  True,  True,  True,  True, False,  True, False),
+      'e'  => ( True, False, False,  True,  True,  True,  True, False),
+      'f'  => ( True, False, False, False,  True,  True,  True, False),
+      'g'  => ( True, False,  True,  True,  True,  True, False, False),
+      'h'  => (False, False,  True, False,  True,  True,  True, False),
+      'i'  => (False,  True,  True, False, False, False, False, False),
+      'j'  => (False,  True,  True,  True,  True, False, False, False),
+      'k'  => (False,  True, False,  True,  True,  True,  True, False),
+      'l'  => (False, False, False,  True,  True,  True, False, False),
+      'm'  => ( True, False,  True, False,  True, False,  True, False),
+      'n'  => (False, False,  True, False,  True, False,  True, False),
+      'o'  => (False, False,  True,  True,  True, False,  True, False),
+      'p'  => ( True,  True, False, False,  True,  True,  True, False),
+      'q'  => ( True,  True,  True, False, False,  True,  True, False),
+      'r'  => (False, False, False, False,  True, False,  True, False),
+      's'  => ( True, False,  True,  True, False,  True,  True, False),
+      't'  => (False, False, False,  True,  True,  True,  True, False),
+      'u'  => (False, False,  True,  True,  True, False, False, False),
+      'v'  => (False, False,  True,  True,  True, False, False, False),
+      'w'  => (False,  True, False,  True, False,  True,  True, False),
+      'x'  => (False, False,  True, False,  True, False, False, False),
+      'y'  => (False,  True,  True,  True, False,  True,  True, False),
+      'z'  => ( True,  True, False,  True,  True, False,  True, False),
+      --        -a-    -b-    -c-    -d-    -e-    -f-    -g-     Dp
+      '{'  => ( True, False, False,  True,  True,  True, False, False),
+      '|'  => (False,  True,  True, False, False, False, False, False),
+      '}'  => ( True,  True,  True,  True, False, False, False, False),
+      '~'  => (False,  True, False, False,  True, False, False, False),
+      others => (False, False, False, False, False, False, False, False)
+      );
+
    type Displays is record
       Chip : Chips;
       Segment_Array : Segment_Arrays;
-      Number : Hex_Digits := 0;
+      Char : Character := ' ';
       Decimal_Lit : Boolean := False;
       Initialised : Boolean := False;
+      No_Dp_Segment : Boolean := False;
    end record; -- Displays
 
    type Display_Buffers is array (Display_7) of Displays;
@@ -180,17 +291,17 @@ package  body TLC5940 is
       -- Seven segment -isplay management subprograms
 
       procedure Initialise_Digit (Display : in Display_7;
-                                  Chip : in Chips;
-                                  Segment_Array : in Segment_Arrays);
+                               Chip : in Chips;
+                               Segment_Array : in Segment_Arrays;
+                               No_Decimal : in Boolean := False);
+   -- Allows for LED_Chanel assigned to the DP to be used for another purpose
 
-      procedure Set_Digit (Display : in Display_7;
-                           Number : in Hex_Digits;
-                           Greyscale : in GreyScales := Greyscales'Last;
-                           Decimal_Lit : in Boolean := False;
-                           No_Decimal : Boolean := False);
-      -- Allows for LED_Chanel assigned to the DP to be used for another purpose
+      procedure Set_Character (Display : in Display_7;
+                               Char : in Character;
+                               Greyscale : in GreyScales := Greyscales'Last;
+                               Decimal_Lit : in Boolean := False);
 
-      function Get_Digit (Display : in Display_7) return Hex_Digits;
+      function Get_Character (Display : in Display_7) return Character;
 
       function Get_Decimal (Display : in Display_7) return Boolean;
 
@@ -325,29 +436,28 @@ package  body TLC5940 is
 
    procedure Initialise_Digit (Display : in Display_7;
                                Chip : in Chips;
-                               Segment_Array : in Segment_Arrays) is
+                               Segment_Array : in Segment_Arrays;
+                               No_Decimal : Boolean := False) is
    begin -- Initialise_Digit
-      Display_State.Initialise_Digit (Display, Chip, Segment_Array);
+      Display_State.Initialise_Digit (Display, Chip, Segment_Array, No_Decimal);
    end Initialise_Digit;
 
-   procedure Set_Digit (Display : in Display_7;
-                        Number : in Hex_Digits;
+   procedure Set_Character (Display : in Display_7;
+                        Char : in Character;
                         Greyscale : in GreyScales := Greyscales'Last;
-                        Decimal_Lit : in Boolean := False;
-                        No_Decimal : Boolean := False) is
+                        Decimal_Lit : in Boolean := False) is
 
-      -- Allows for LED_Chanel assigned to the DP to be used for another purpose
+      -- Allows for LED_Channel assigned to the DP to be used for another purpose
 
-   begin -- Set_Digit
-      Display_State.Set_Digit (Display, Number, Greyscale, Decimal_Lit,
-                               No_Decimal);
-   end Set_Digit;
+   begin -- Set_Character
+      Display_State.Set_Character (Display, Char, Greyscale, Decimal_Lit);
+   end Set_Character;
 
-   function Get_Digit (Display : in Display_7) return Hex_Digits is
+   function Get_Character (Display : in Display_7) return Character is
 
-   begin -- Get_Digit
-      return Display_State.Get_Digit (Display);
-   end Get_Digit;
+   begin -- Get_Character
+      return Display_State.Get_Character (Display);
+   end Get_Character;
 
    function Get_Decimal (Display : in Display_7) return Boolean is
 
@@ -660,134 +770,28 @@ package  body TLC5940 is
 
       procedure Initialise_Digit (Display : in Display_7;
                                   Chip : in Chips;
-                                  Segment_Array : in Segment_Arrays) is
+                                  Segment_Array : in Segment_Arrays;
+                                  No_Decimal : in Boolean := False) is
+
+         -- Allows for LED_Channel assigned to the DP to be used for another
+         -- purpose
 
       begin -- Initialise_Digit
          Display_Buffer (Display).Chip := Chip;
          Display_Buffer (Display).Segment_Array := Segment_Array;
          Display_Buffer (Display).Initialised := True;
+         Display_Buffer (Display).No_Dp_Segment := No_Decimal;
       end Initialise_Digit;
 
-      procedure Set_Digit (Display : in Display_7;
-                           Number : in Hex_Digits;
-                           Greyscale : in GreyScales := Greyscales'Last;
-                           Decimal_Lit : in Boolean := False;
-                           No_Decimal : Boolean := False) is
+      procedure Set_Character (Display : in Display_7;
+                               Char : in Character;
+                               Greyscale : in GreyScales := Greyscales'Last;
+                               Decimal_Lit : in Boolean := False) is
 
-         -- Allows for LED_Chanel assigned to the DP to be used for another
-         -- purpose
-
-         Light : array (Segments) of Boolean := (others => False);
-
-         --   -a-
-         --   f b
-         --   -g-
-         --   e c
-         --   -d-Dp
-
-      begin -- Set_Digit
+      begin -- Set_Character
          if Display_Buffer (Display).Initialised then
-            Display_Buffer (Display).Number := Number;
-            Display_Buffer (Display).Decimal_Lit := Decimal_Lit;
-            case Number is
-            when 0 =>
-               Light (Segment_a) := True;
-               Light (Segment_b) := True;
-               Light (Segment_c) := True;
-               Light (Segment_d) := True;
-               Light (Segment_e) := True;
-               Light (Segment_f) := True;
-            when 1 =>
-               Light (Segment_b) := True;
-               Light (Segment_c) := True;
-            when 2 =>
-               Light (Segment_a) := True;
-               Light (Segment_b) := True;
-               Light (Segment_d) := True;
-               Light (Segment_e) := True;
-               Light (Segment_g) := True;
-            when 3 =>
-               Light (Segment_a) := True;
-               Light (Segment_b) := True;
-               Light (Segment_c) := True;
-               Light (Segment_d) := True;
-               Light (Segment_g) := True;
-            when 4 =>
-               Light (Segment_b) := True;
-               Light (Segment_c) := True;
-               Light (Segment_f) := True;
-               Light (Segment_g) := True;
-            when 5 =>
-               Light (Segment_a) := True;
-               Light (Segment_c) := True;
-               Light (Segment_d) := True;
-               Light (Segment_f) := True;
-               Light (Segment_g) := True;
-            when 6 =>
-               Light (Segment_a) := True;
-               Light (Segment_c) := True;
-               Light (Segment_d) := True;
-               Light (Segment_e) := True;
-               Light (Segment_f) := True;
-               Light (Segment_g) := True;
-            when 7 =>
-               Light (Segment_a) := True;
-               Light (Segment_b) := True;
-               Light (Segment_c) := True;
-            when 8 =>
-               Light (Segment_a) := True;
-               Light (Segment_b) := True;
-               Light (Segment_c) := True;
-               Light (Segment_d) := True;
-               Light (Segment_e) := True;
-               Light (Segment_f) := True;
-               Light (Segment_g) := True;
-            when 9 =>
-               Light (Segment_a) := True;
-               Light (Segment_b) := True;
-               Light (Segment_c) := True;
-               Light (Segment_d) := True;
-               Light (Segment_f) := True;
-               Light (Segment_g) := True;
-            when 16#A# =>
-               Light (Segment_a) := True;
-               Light (Segment_b) := True;
-               Light (Segment_c) := True;
-               Light (Segment_e) := True;
-               Light (Segment_f) := True;
-               Light (Segment_g) := True;
-            when 16#b# =>
-               Light (Segment_c) := True;
-               Light (Segment_d) := True;
-               Light (Segment_e) := True;
-               Light (Segment_f) := True;
-               Light (Segment_g) := True;
-            when 16#C# =>
-               Light (Segment_a) := True;
-               Light (Segment_d) := True;
-               Light (Segment_e) := True;
-               Light (Segment_f) := True;
-            when 16#d# =>
-               Light (Segment_b) := True;
-               Light (Segment_c) := True;
-               Light (Segment_d) := True;
-               Light (Segment_e) := True;
-               Light (Segment_g) := True;
-            when 16#E# =>
-               Light (Segment_a) := True;
-               Light (Segment_d) := True;
-               Light (Segment_e) := True;
-               Light (Segment_f) := True;
-               Light (Segment_g) := True;
-            when 16#F# =>
-               Light (Segment_a) := True;
-               Light (Segment_e) := True;
-               Light (Segment_f) := True;
-               Light (Segment_g) := True;
-            end case; -- Number
-            Light (Segment_DP) := Decimal_Lit;
             for S in Segments range Segment_a .. Segment_g loop
-               if Light (S) then
+               if Character_Map (Char, S) then
                   Set_Greyscale (Display_Buffer (Display).Chip,
                                  Display_Buffer (Display).Segment_Array (S),
                                  Greyscale);
@@ -796,9 +800,11 @@ package  body TLC5940 is
                                  Display_Buffer (Display).Segment_Array (S),
                                  Greyscales'First);
                end if; -- Light (S)
-            end loop; -- S in Segments
-            if not No_Decimal then
-               if Light (Segment_DP) then
+            end loop; -- S in Segments range Segment_a .. Segment_g
+            if not Display_Buffer (Display).No_Dp_Segment then
+               Display_Buffer (Display).Decimal_Lit :=
+                 Decimal_Lit or Character_Map (Char, Segment_Dp);
+               if Display_Buffer (Display).Decimal_Lit then
                   Set_Greyscale (Display_Buffer (Display).Chip,
                                  Display_Buffer (Display).
                                    Segment_Array (Segment_DP),
@@ -808,24 +814,23 @@ package  body TLC5940 is
                                  Display_Buffer (Display).
                                    Segment_Array (Segment_DP),
                                  Greyscales'First);
-               end if; -- Light (Segment_DP)
+               end if; -- Display_Buffer (Display).Decimal_Lit
             end if; -- not No_Decimal
          else
-            raise Uninitialised_Digit with "Set_Digit:" &
-              Display_7'Image (Display);
+            raise Uninitialised_Digit with "Set_Character:" & Display'Img;
          end if; -- Display_Buffer (Display).Initialised
-      end Set_Digit;
+      end Set_Character;
 
-      function Get_Digit (Display : in Display_7) return Hex_Digits is
+      function Get_Character (Display : in Display_7) return Character is
 
-      begin -- Get_Digit
+      begin -- Get_Character
          if Display_Buffer (Display).Initialised then
-            return Display_Buffer (Display).Number;
+            return Display_Buffer (Display).Char;
          else
             raise Uninitialised_Digit with "Get_Digit:" &
               Display_7'Image (Display);
          end if; -- Display_Buffer (Display).Initialised
-      end Get_Digit;
+      end Get_Character;
 
       function Get_Decimal (Display : in Display_7) return Boolean is
 
