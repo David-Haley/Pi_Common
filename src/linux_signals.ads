@@ -2,11 +2,9 @@
 -- to allow an orderly shutdown of a program when these requests are received.
 -- Author    : David Haley
 -- Created   : 23/05/2022
--- Last Edit : 23/05/2022
+-- Last Edit : 21/04/2026
 
-with Ada.Interrupts; use Ada.Interrupts;
-with Ada.Interrupts.Names; use Ada.Interrupts.Names;
-with GNAT.Ctrl_C; use GNAT.Ctrl_C;
+--  20260421 : Updated to remove compiler style warnings.
 
 package Linux_Signals is
    
