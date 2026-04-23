@@ -159,7 +159,7 @@ procedure Test_TLC5940 is
                  LED_Channels'First  .. Last_LED loop
                   Set_Greyscale (LEDs, LED_Chanel, Greyscales'First);
                end loop; -- for LED_Chanel in LED_Channels range ...
-               Set_Character (Digit_One, 8, Greyscales'First, True);
+               Set_Character (Digit_One, '8', Greyscales'First, True);
                Write_LEDs;
                Run_Clock := True;
             end Start;
@@ -179,7 +179,11 @@ procedure Test_TLC5940 is
                if Auto_Brightness < Minimum_Brightness then
                   Auto_Brightness := Minimum_Brightness;
                end if; -- Auto_Brightness < Minimum_Brightness
-               Set_Character (Digit_One, Seconds_Count / 8, Auto_Brightness);
+               declare
+                  Digit_String : String := Natural'Image (Seconds_Count / 8);
+               begin
+                  Set_Character (Digit_One, Digit_String (2), Auto_Brightness);
+               end;
                Last_Lit := Seconds_Count mod 8;
                for I in reverse LED_Channels range
                  LED_Channels'First .. Last_LED loop
@@ -217,7 +221,7 @@ begin -- Test_TLC5940
               LED_Channels'First .. Last_LED loop
                Set_Greyscale (LEDs, LED_Chanel, Greyscales'Last);
             end loop; -- for LED_Chanel in LED_Channels range ...
-            Set_Character (Digit_One, 8, Decimal_Lit => True);
+            Set_Character (Digit_One, '8', Decimal_Lit => True);
             Write_LEDs;
          when '2' =>
             -- Light one LED
@@ -247,7 +251,7 @@ begin -- Test_TLC5940
               LED_Channels'First .. Last_LED loop
                Set_Greyscale (LEDs, LED_Chanel, Greyscales'Last / 2);
             end loop; -- LED_Chanel in LED_Channels range ...
-            Set_Character (Digit_One, 8, Greyscales'Last / 2, True);
+            Set_Character (Digit_One, '8', Greyscales'Last / 2, True);
             Write_LEDs;
          when '4' =>
             -- All Corections to half
@@ -260,7 +264,7 @@ begin -- Test_TLC5940
               LED_Channels'First  .. Last_LED loop
                Set_Greyscale (LEDs, LED_Chanel, Greyscales'First);
             end loop; -- for LED_Chanel in LED_Channels range ...
-            Set_Character (Digit_One, 8, Greyscales'First, True);
+            Set_Character (Digit_One, '8', Greyscales'First, True);
             Write_LEDs;
             Delay 1.0;
             for Brightness in Greyscales loop
@@ -268,7 +272,7 @@ begin -- Test_TLC5940
                  LED_Channels'First .. Last_LED loop
                   Set_Greyscale (LEDs, LED_Chanel, Brightness);
                end loop; -- for LED_Chanel in LED_Channels range ...
-               Set_Character (Digit_One, 8, Brightness, True);
+               Set_Character (Digit_One, '8', Brightness, True);
                Write_LEDs;
                Delay 0.01;
             end loop; -- Brighness in Greyscales
@@ -285,7 +289,7 @@ begin -- Test_TLC5940
                  LED_Channels'First .. Last_LED loop
                   Set_Greyscale (LEDs, LED_Chanel, Greyscales'First);
                end loop; -- for LED_Chanel in LED_Channels range ...
-               Set_Character (Digit_One, 8, Greyscales'First, True);
+               Set_Character (Digit_One, '8', Greyscales'First, True);
                Write_LEDs;
                Delay 1.0;
                For Brightness_Index in Brighness_Indices loop
@@ -316,7 +320,40 @@ begin -- Test_TLC5940
             end loop; -- for LED_Chanel in LED_Channels range ...
             for DP in Boolean loop
                For Number in Hex_Digits loop
-                  Set_Character (Digit_One, Number, Decimal_Lit => DP);
+                  case Number is
+                     when 0 => 
+                        Set_Character (Digit_One, '0', Decimal_Lit => DP);
+                     when 1 => 
+                        Set_Character (Digit_One, '1', Decimal_Lit => DP);
+                     when 2 => 
+                        Set_Character (Digit_One, '2', Decimal_Lit => DP);
+                     when 3 => 
+                        Set_Character (Digit_One, '3', Decimal_Lit => DP);
+                     when 4 => 
+                        Set_Character (Digit_One, '4', Decimal_Lit => DP);
+                     when 5 => 
+                        Set_Character (Digit_One, '5', Decimal_Lit => DP);
+                     when 6 => 
+                        Set_Character (Digit_One, '6', Decimal_Lit => DP);
+                     when 7 => 
+                        Set_Character (Digit_One, '7', Decimal_Lit => DP);
+                     when 8 => 
+                        Set_Character (Digit_One, '8', Decimal_Lit => DP);
+                     when 9 => 
+                        Set_Character (Digit_One, '9', Decimal_Lit => DP);
+                     when 10 => 
+                        Set_Character (Digit_One, 'A', Decimal_Lit => DP);
+                     when 11 => 
+                        Set_Character (Digit_One, 'B', Decimal_Lit => DP);
+                     when 12 => 
+                        Set_Character (Digit_One, 'C', Decimal_Lit => DP);
+                     when 13 => 
+                        Set_Character (Digit_One, 'D', Decimal_Lit => DP);
+                     when 14 => 
+                        Set_Character (Digit_One, 'E', Decimal_Lit => DP);
+                     when 15 => 
+                        Set_Character (Digit_One, 'F', Decimal_Lit => DP);
+                  end case;
                   Write_LEDs;
                   delay 1.0;
                end loop; -- Number in Hex_Digits
@@ -331,7 +368,7 @@ begin -- Test_TLC5940
                  LED_Channels'First .. Last_LED loop
                Set_Greyscale (LEDs, LED_Chanel, Greyscales'Last);
             end loop; -- for LED_Chanel in LED_Channels range ...
-            Set_Character (Digit_One, 8, Decimal_Lit => True);
+            Set_Character (Digit_One, '8', Decimal_Lit => True);
             Write_LEDs;
             delay 1.0;
             Zero_Corrections;
@@ -350,7 +387,7 @@ begin -- Test_TLC5940
                  LED_Channels'First .. Last_LED loop
                Set_Greyscale (LEDs, LED_Chanel, Greyscales'Last);
             end loop; -- for LED_Chanel in LED_Channels range ...
-            Set_Character (Digit_One, 8, Decimal_Lit => True);
+            Set_Character (Digit_One, '8', Decimal_Lit => True);
             Write_LEDs;
             delay 1.0;
             Zero_Corrections;

@@ -2,18 +2,21 @@
 
 --  Author    : David Haley
 --  Created   : 09/03/2026
---  Last_Edit : 17/03/2026
+--  Last_Edit : 23/08/2026
 
--- 20260317: Redundant with for clause MQTT removed
+--  20260423 : Removed potential memory leak in Send, Data_Pointer is now
+--  Explicetly feeed.
+--  20260422 : Changes to remove compiler warnings, largely style.
+--  Functional changes for more correct pointer and address conversions.
+--  20260317: Redundant with for clause MQTT removed
 
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Containers.Ordered_Maps;
 with Ada.Task_Identification; use Ada.Task_Identification;
-with Unchecked_Conversion;
-with Unchecked_Deallocation;
+with Ada.Unchecked_Deallocation;
 with Interfaces.C.Strings; use Interfaces.C.Strings;
-with Interfaces.C.Extensions;
 with System;
+with System.Address_To_Access_Conversions;
 with Machine_Properties;
 with MQTT_Library; use MQTT_Library;
 
@@ -21,17 +24,23 @@ package body MQTT_Client is
 
    --  Package private data structures
 
-   type Data_Pointers is access all MQTT_Data;
-   procedure Free is new Unchecked_Deallocation (MQTT_Data, Data_Pointers);
-   function Data_Pointer_to_Address is new
-     Unchecked_Conversion (Data_Pointers, System.Address);
+   package Data_Conversions is new
+     System.Address_To_Access_Conversions (MQTT_Data);
+   use Data_Conversions;
 
-   type Handle_Pointers is access MQTT_Handle;
-   procedure Free is new Unchecked_Deallocation (MQTT_Handle, Handle_Pointers);
-   function Handle_Pointer_to_Address is new
-     Unchecked_Conversion (Handle_Pointers, System.Address);
-   function Address_to_Handle_Pointer is new
-     Unchecked_Conversion (System.Address, Handle_Pointers);
+   --  The to_Pointer conversion causes a compiler warning becuse MQTT_Data is
+   --  an unconstrained array. To_Pointer instantiated here is not used;
+
+   subtype Data_Pointers is Data_Conversions.Object_Pointer;
+   procedure Free is new Ada.Unchecked_Deallocation (MQTT_Data, Data_Pointers);
+
+   package Handle_Conversions is new
+     System.Address_To_Access_Conversions (MQTT_Handle);
+   use Handle_Conversions;
+
+   subtype Handle_Pointers is Handle_Conversions.Object_Pointer;
+   procedure Free is new
+     Ada.Unchecked_Deallocation (MQTT_Handle, Handle_Pointers);
 
    task type Rx_Mailbox is
       entry Deposit (Item : in Data_Pointers);
@@ -40,10 +49,10 @@ package body MQTT_Client is
    end Rx_Mailbox;
 
    type Rx_Pointers is access Rx_Mailbox;
-   procedure Free is new Unchecked_Deallocation (Rx_Mailbox, Rx_Pointers);
+   procedure Free is new Ada.Unchecked_Deallocation (Rx_Mailbox, Rx_Pointers);
 
    type Connections is record
-      Topic : Unbounded_String := null_Unbounded_String;
+      Topic : Unbounded_String := Null_Unbounded_String;
       QoS : QoSs := 0;
       Mosq : access mosquitto := null;
       Handle_Pointer : Handle_Pointers := null;
@@ -71,9 +80,9 @@ package body MQTT_Client is
                                                 mosquitto_message)
                                               with Convention => C;
 
-package Connection_Stores is new
-  Ada.Containers.Ordered_Maps (MQTT_Handle, Connections);
-use Connection_Stores;
+   package Connection_Stores is new
+     Ada.Containers.Ordered_Maps (MQTT_Handle, Connections);
+   use Connection_Stores;
 
    --  Package global data
 
@@ -118,13 +127,12 @@ use Connection_Stores;
    begin -- Connect_Tx
       Connection.Topic := To_Unbounded_String (Topic);
       Connection.QoS := QoS;
-      Connection.Handle_Pointer := new MQTT_Handle;
       Next_Handle.Get (Handle);
       Connection.Handle_Pointer := new MQTT_Handle'(Handle);
       Client_Id_Pointer := New_String (Client_Id);
       Connection.Mosq :=
         mosquitto_new (Client_Id_Pointer, True,
-                       Handle_Pointer_to_Address (Connection.Handle_Pointer));
+                       To_Address (Connection.Handle_Pointer));
       Free (Client_Id_Pointer);
       if Connection.Mosq = null then
          raise MQTT_Error with "Tx failed to create mosquitto";
@@ -149,8 +157,8 @@ use Connection_Stores;
       end if; -- Return_Code /=  MOSQ_ERR_SUCCESS
    end Connect_Tx;
 
-procedure Send (Handle : MQTT_Handle;
-                Message : MQTT_Data) is
+   procedure Send (Handle : MQTT_Handle;
+                   Message : MQTT_Data) is
 
       --  Sends a String.
 
@@ -167,9 +175,10 @@ procedure Send (Handle : MQTT_Handle;
       Topic_Pointer := New_String (To_String (Connection_Store (Handle).Topic));
       Return_Code := mosquitto_publish (Connection_Store (Handle).Mosq, null,
                                         Topic_Pointer, Message'Length,
-                                        Data_pointer_to_Address (Data_Pointer),
+                                        To_Address (Data_Pointer),
                                         Connection_Store (Handle).QoS, False);
       Free (Topic_Pointer);
+      Free (Data_Pointer);
       if Return_Code /=  MOSQ_ERR_SUCCESS then
          raise MQTT_Error with "Send failed, code:" & Return_Code'Img;
       end if; -- Return_Code /=  MOSQ_ERR_SUCCESS
@@ -193,8 +202,8 @@ procedure Send (Handle : MQTT_Handle;
       Client_Id : constant String := Machine_Properties.Machine_Name & '_' &
          Topic & "_Rx_" & Image (Ada.Task_Identification.Current_Task);
       Client_Id_Pointer : chars_ptr;
-      Connect_Pointer : Connect_Pointers := On_Connect'Access;
-      Message_Pointer : Message_Pointers := On_Message'Access;
+      Connect_Pointer : constant Connect_Pointers := On_Connect'Access;
+      Message_Pointer : constant Message_Pointers := On_Message'Access;
 
    begin -- Connect_Rx
       Connection.Topic := To_Unbounded_String (Topic);
@@ -205,7 +214,7 @@ procedure Send (Handle : MQTT_Handle;
       Client_Id_Pointer := New_String (Client_Id);
       Connection.Mosq :=
         mosquitto_new (Client_Id_Pointer, True,
-                       Handle_Pointer_to_Address (Connection.Handle_Pointer));
+                       To_Address (Connection.Handle_Pointer));
       Free (Client_Id_Pointer);
       if Connection.Mosq = null then
          raise MQTT_Error with "Rx failed to create mosquitto";
@@ -260,7 +269,7 @@ procedure Send (Handle : MQTT_Handle;
       end select;
       if Data_Pointer /= null then
          declare -- Result declaration block
-            Result : String := Data_Pointer.all;
+            Result : constant String := Data_Pointer.all;
          begin -- Result declaration block
             Free (Data_Pointer); 
             return Result;
@@ -270,7 +279,7 @@ procedure Send (Handle : MQTT_Handle;
       end if; -- Data_Pointer /= null then
    end Receive;
 
-procedure Disconnect (Handle : MQTT_Handle) is
+   procedure Disconnect (Handle : MQTT_Handle) is
 
       --  Disconnects either a publisher or subscriber.
 
@@ -314,10 +323,10 @@ procedure Disconnect (Handle : MQTT_Handle) is
 
       Topic_Pointer : chars_ptr;
       Local_Rc : int;
-      Handle_Pointer : Handle_Pointers := Address_to_Handle_Pointer (Obj);
+      Handle_Pointer : constant Handle_Pointers := To_Pointer (Obj);
 
    begin -- On_Connect
-      If Return_Code /=  MOSQ_ERR_SUCCESS then
+      if Return_Code /=  MOSQ_ERR_SUCCESS then
          raise MQTT_Error with "Rx connection failed, code:" &
            Return_Code'Img;
       end if; -- Return_Code /=  MOSQ_ERR_SUCCESS
@@ -326,18 +335,25 @@ procedure Disconnect (Handle : MQTT_Handle) is
       Local_Rc := mosquitto_subscribe (Mosq, null, Topic_Pointer,
         Connection_Store (Handle_Pointer.all).QoS);
       Free (Topic_Pointer);
-      If Local_Rc /= MOSQ_ERR_SUCCESS then
+      if Local_Rc /= MOSQ_ERR_SUCCESS then
          raise MQTT_Error with "Subscription failed, code:" & Local_Rc'Img;
       end if; -- Local_Rc /= MOSQ_ERR_SUCCESS
    end On_Connect;
+
+   pragma Warnings (Off, "-gnatwf");
 
    procedure On_Message (Mosq : access mosquitto;
                          Obj : System.Address;
                          Message : access constant mosquitto_message) is
 
+      --  Warning that Mosq is not used is suppressed, Mosq is necessary for
+      --  conformance with libary call back.
+
+   pragma Warnings (On, "-gnatwf");
+
       Data : MQTT_Data (1 .. MQTT_Indices (Message.payloadlen));
       for Data'Address use Message.payload;
-      Handle_Pointer : Handle_Pointers := Address_to_Handle_Pointer (Obj);
+      Handle_Pointer : constant Handle_Pointers := To_Pointer (Obj);
       Data_Pointer : Data_Pointers := null;
 
    begin -- On_Message
@@ -346,7 +362,7 @@ procedure Disconnect (Handle : MQTT_Handle) is
       if Message.payloadlen > 0 then
          Data_Pointer := new MQTT_Data'(Data);
       end if; -- Message.payloadlen > 0
-      Connection_Store (Handle_Pointer.all).Rx_Pointer.Deposit (Data_pointer);
+      Connection_Store (Handle_Pointer.all).Rx_Pointer.Deposit (Data_Pointer);
    end On_Message;
 
    task body Rx_Mailbox is
@@ -366,7 +382,7 @@ procedure Disconnect (Handle : MQTT_Handle) is
                      Item := new MQTT_Data'(Item_Store.all);
                      Free (Item_Store);
                   else
-                     item := null;
+                     Item := null;
                   end if; -- Item_Store /= null
                end Collect;
             end Deposit;
@@ -379,29 +395,29 @@ procedure Disconnect (Handle : MQTT_Handle) is
       end loop; -- Connected
    end Rx_Mailbox;
 
-procedure Finalize (Controlled_Boolean : in out Controlled_Booleans) is
+   procedure Finalize (Controlled_Boolean : in out Controlled_Booleans) is
 
       --  Ensures that libmosquitto is cleaned up automatically when
       --  MQTT_Client goes out of scope, without an explicit call to this
       --  package. Disconnects any open connections
 
-      Return_Code : int;
+      Junk : int;
 
    begin -- Finalize
       -- Allow for finalisation being called more than once
       if Controlled_Boolean.State then
          Controlled_Boolean.State := False;
+         for H in Iterate (Connection_Store) loop
+            begin -- Disconnect exception block
+               Disconnect (Key (H));
+            exception
+               when others =>
+                  null;
+                  --  Finalisation code is not permitted to propagate exceptions.
+            end; -- Disconnect exception block
+         end loop; -- H in Iterate (Connection_Store)
+         Junk := mosquitto_lib_cleanup;  -- Always returns success
       end if; -- Controlled_Boolean.State
-      for H in Iterate (Connection_Store) loop
-         begin -- Disconnect exception block
-            Disconnect (Key (H));
-         exception
-            when others =>
-               null;
-               --  Finalisation code is not permitted to propagate exceptions.
-         end; -- Disconnect exception block
-      end loop; -- H in Iterate (Connection_Store)
-      Return_Code := mosquitto_lib_cleanup;
    end Finalize;
 
    procedure Initialize (Controlled_Boolean : in out Controlled_Booleans) is
@@ -428,5 +444,11 @@ begin -- MQTT_Client
    if Version < LIBMOSQUITTO_VERSION_NUMBER then
       raise MQTT_Error with "Old library, version:" & Major'Img & Minor'Img &
         Revision'Img;
-   end if; -- Version < LIBMOSQUITTO_VERSION_NUMBER  
+   end if; -- Version < LIBMOSQUITTO_VERSION_NUMBER
+
+   pragma Warnings (Off, "-gnatwm" );
+      Initialize (Library_Initialised);
+   --  Variable used to ensure single shot finalisation, it is set here and
+   --  unset by Finalize.
+   pragma Warnings (On, "-gnatwm" );  
 end MQTT_Client;

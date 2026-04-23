@@ -1,7 +1,10 @@
 --  This package supports the retreival if some machine properties.
 --  Author    : David Haley
 --  Created   : 28/02/2026
---  Last Edit : 04/03/2026
+--  Last Edit : 22/04/2026
+
+--  20240422 : Result in Machine_Name made constant to remove compiler style
+--  warning.
 
 pragma Ada_2012;
 
@@ -37,7 +40,7 @@ package body Machine_Properties is
       Return_Code := get_host_name (Result_Pointer, Name_Length);
       if Return_Code = 0 then
          declare
-            Result : String := Value (Result_Pointer);
+            Result : constant String := Value (Result_Pointer);
          begin
             Free (Result_Pointer);
             return Result;
