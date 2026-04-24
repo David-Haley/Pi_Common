@@ -2,8 +2,9 @@
 
 --  Author    : David Haley
 --  Created   : 09/03/2026
---  Last_Edit : 23/08/2026
+--  Last_Edit : 24/08/2026
 
+--  20260424 : Follow official Mosquitto example
 --  20260423 : Removed potential memory leak in Send, Data_Pointer is now
 --  Explicetly feeed.
 --  20260422 : Changes to remove compiler warnings, largely style.
@@ -57,11 +58,16 @@ package body MQTT_Client is
       Mosq : access mosquitto := null;
       Handle_Pointer : Handle_Pointers := null;
       Rx_Pointer : Rx_Pointers := null;
+      Connected : Boolean := False;
    end record; -- Connections
 
-   procedure On_Connect (Mosq : access mosquitto;
-                         Obj : System.Address;
-                         Return_Code : int) with Convention => C;
+   procedure Tx_On_Connect (Mosq : access mosquitto;
+                            Obj : System.Address;
+                            Return_Code : int) with Convention => C;
+
+   procedure Rx_On_Connect (Mosq : access mosquitto;
+                            Obj : System.Address;
+                            Return_Code : int) with Convention => C;
    
    type Connect_Pointers is access procedure (Mosq : access mosquitto;
                                               Obj : System.Address;
@@ -123,6 +129,7 @@ package body MQTT_Client is
       Client_Id : constant String := Machine_Properties.Machine_Name & '_' &
          Topic & "_Tx_" & Image (Ada.Task_Identification.Current_Task);
       Client_Id_Pointer : chars_ptr;
+      Connect_Pointer : constant Connect_Pointers := Tx_On_Connect'Access;
 
    begin -- Connect_Tx
       Connection.Topic := To_Unbounded_String (Topic);
@@ -148,12 +155,18 @@ package body MQTT_Client is
          raise MQTT_Error with
            "Tx failed seting User_Name and Password, code:" & Return_Code'Img;
       end if; -- Return_Code /= MOSQ_ERR_SUCCESS
+      mosquitto_connect_callback_set (Connection.Mosq, Connect_Pointer);
       Broker_Pointer := New_String (Broker_Host);
       Return_Code := mosquitto_connect (Connection.Mosq, Broker_Pointer, 1883,
         Keep_Alive_Time);
       Free (Broker_Pointer);
       if Return_Code /=  MOSQ_ERR_SUCCESS then
          raise MQTT_Error with "Tx connect failed, code:" & Return_Code'Img;
+      end if; -- Return_Code /=  MOSQ_ERR_SUCCESS
+      Return_Code := mosquitto_loop_start (Connection.Mosq);
+      if Return_Code /=  MOSQ_ERR_SUCCESS then
+         raise MQTT_Error with "Start Tx loop failed, code:" & 
+           Return_Code'Img;
       end if; -- Return_Code /=  MOSQ_ERR_SUCCESS
    end Connect_Tx;
 
@@ -168,7 +181,8 @@ package body MQTT_Client is
 
    begin -- Send
       if not Contains (Connection_Store, Handle) or else
-        Connection_Store (Handle).Rx_Pointer /= null
+        (Connection_Store (Handle).Rx_Pointer /= null or
+         not Connection_Store (Handle).Connected)
       then
          raise MQTT_Error with "Send invalid Handle";
       end if; -- not Contains (Connection_Store, Handle) or else ...
@@ -202,7 +216,7 @@ package body MQTT_Client is
       Client_Id : constant String := Machine_Properties.Machine_Name & '_' &
          Topic & "_Rx_" & Image (Ada.Task_Identification.Current_Task);
       Client_Id_Pointer : chars_ptr;
-      Connect_Pointer : constant Connect_Pointers := On_Connect'Access;
+      Connect_Pointer : constant Connect_Pointers := Rx_On_Connect'Access;
       Message_Pointer : constant Message_Pointers := On_Message'Access;
 
    begin -- Connect_Rx
@@ -258,7 +272,8 @@ package body MQTT_Client is
 
    begin -- Receive
       if not Contains (Connection_Store, Handle) or else
-        Connection_Store (Handle).Rx_Pointer = null
+        (Connection_Store (Handle).Rx_Pointer = null or
+         not Connection_Store (Handle).Connected)
       then
          raise MQTT_Error with "Receive invalid Handle";
       end if; -- not Contains (Connection_Store, Handle) or else ...
@@ -293,13 +308,11 @@ package body MQTT_Client is
             raise MQTT_Error with "Disconnect failed, code:" &
               Return_Code'Img;
          end if; -- Return_Code /=  MOSQ_ERR_SUCCESS
-         if Connection_Store (Handle).Rx_Pointer /= null then
             Return_Code := mosquitto_loop_stop (Connection_Store (Handle).Mosq,
             False);
-            if Return_Code /=  MOSQ_ERR_SUCCESS then
-               raise MQTT_Error with "Loop stop failed, code:" & Return_Code'Img;
-            end if; -- Return_Code /=  MOSQ_ERR_SUCCESS
-         end if; -- Connection_Store (Handle).Rx_Pointer /= null
+         if Return_Code /=  MOSQ_ERR_SUCCESS then
+            raise MQTT_Error with "Loop stop failed, code:" & Return_Code'Img;
+         end if; -- Return_Code /=  MOSQ_ERR_SUCCESS
          mosquitto_destroy (Connection_Store (Handle).Mosq);
          if Connection_Store (Handle).Rx_Pointer /= null then
             select
@@ -317,19 +330,38 @@ package body MQTT_Client is
       end if; -- Contains (Connection_Store, Handle)
    end Disconnect;
 
-   procedure On_Connect (Mosq : access mosquitto;
-                         Obj : System.Address;
-                         Return_Code : int) is
+   procedure Tx_On_Connect (Mosq : access mosquitto;
+                            Obj : System.Address;
+                            Return_Code : int) is
 
       Topic_Pointer : chars_ptr;
       Local_Rc : int;
       Handle_Pointer : constant Handle_Pointers := To_Pointer (Obj);
 
-   begin -- On_Connect
-      if Return_Code /=  MOSQ_ERR_SUCCESS then
-         raise MQTT_Error with "Rx connection failed, code:" &
+   begin -- Tx_On_Connec
+      if Return_Code = MOSQ_ERR_SUCCESS then
+         Connection_Store (Handle_Pointer.all).Connected := True;
+      else
+         raise MQTT_Error with "Tx call back, connection failed, code:" &
            Return_Code'Img;
-      end if; -- Return_Code /=  MOSQ_ERR_SUCCESS
+      end if; -- Return_Code = MOSQ_ERR_SUCCESS
+   end Tx_On_Connect;
+
+   procedure Rx_On_Connect (Mosq : access mosquitto;
+                            Obj : System.Address;
+                            Return_Code : int) is
+
+      Topic_Pointer : chars_ptr;
+      Local_Rc : int;
+      Handle_Pointer : constant Handle_Pointers := To_Pointer (Obj);
+
+   begin -- Rx_On_Connect
+      if Return_Code = MOSQ_ERR_SUCCESS then
+         Connection_Store (Handle_Pointer.all).Connected := True;
+      else
+         raise MQTT_Error with "Rx call back, connection failed, code:" &
+           Return_Code'Img;
+      end if; -- Return_Code = MOSQ_ERR_SUCCESS
       Topic_Pointer :=
         New_String (To_String (Connection_Store (Handle_Pointer.all).Topic));
       Local_Rc := mosquitto_subscribe (Mosq, null, Topic_Pointer,
@@ -338,7 +370,7 @@ package body MQTT_Client is
       if Local_Rc /= MOSQ_ERR_SUCCESS then
          raise MQTT_Error with "Subscription failed, code:" & Local_Rc'Img;
       end if; -- Local_Rc /= MOSQ_ERR_SUCCESS
-   end On_Connect;
+   end Rx_On_Connect;
 
    pragma Warnings (Off, "-gnatwf");
 
