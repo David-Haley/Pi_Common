@@ -9,3 +9,6 @@ obj/
 
 # Project file
 *.xml
+
+# VS code's directory
+.vscode/
