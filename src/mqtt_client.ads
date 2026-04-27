@@ -2,9 +2,14 @@
 
 --  Author    : David Haley
 --  Created   : 09/03/2026
---  Last_Edit : 13/03/2026
+--  Last_Edit : 26/04/2026
+
+--  20260426 : Receive made non blocking, libmosquitto buffers subscribed
+--  topics so strictly the buffering in this unit was not required, thus
+--  eliminating the need of an additional thread per subscribed topic.
 
 with Ada.Finalization; use Ada.Finalization;
+with Ada.Real_Time; use Ada.Real_Time;
 with Interfaces.C; use Interfaces.C;
 
 package MQTT_Client is
@@ -13,9 +18,7 @@ package MQTT_Client is
 
    subtype QoSs is int range 0 .. 2; -- As defined by standards
 
-   Forever : constant Duration := Duration'Last;
-
-   subtype Timeouts is Duration range 0.0 .. Forever;
+   subtype Timeouts is Time_Span;
 
    subtype Keep_Alive_Times is int range 1 .. 3600;
    --  Longer values may be acceptable
@@ -52,11 +55,13 @@ package MQTT_Client is
    --  Returns Handle which nust be used with Receive and Disconnect
 
    function Receive (Handle : MQTT_Handle;
-                     Timeout : Timeouts := Forever) return String;
-   --  The function, will return immediately if a message has been received
-   --  or after Timout.
-   --  Returns a string, a zero length String is returned if the call times
-   --  out.
+                     Timeout : Timeouts := Time_Span_Last) return String;
+
+   --  The function, will return immediately. Either with a message a message
+   --  or a zero lemgth string if no message is available.
+   --  The Timeout is a stale data timeout. If the last received message
+   --  is more than the timeout old, a zero length String is returned.
+   --  Unread messages will be disposed of, only the most recent is available.
 
    procedure Disconnect (Handle : MQTT_Handle);
    --  Disconnects either a publisher or subscriber.

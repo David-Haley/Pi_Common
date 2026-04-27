@@ -2,13 +2,15 @@
 
 --  Author    : David Haley
 --  Created   : 12/03/2026
---  Last_Edit : 24/04/2026
+--  Last_Edit : 26/04/2027
 
+--  20260427 : Updated to MQTT_Client changes
 --  20260424 : Loop back test and the ability to set QoS added.
 
 with Ada.Numerics.Generic_Complex_Types;
 with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Command_Line; use Ada.Command_Line;
+with Ada.Real_Time; use Ada.Real_Time;
 with MQTT_Client; use MQTT_Client;
 
 procedure Test_MQTT_Client is
@@ -22,14 +24,15 @@ procedure Test_MQTT_Client is
    QoS : QoSs;
    Run_Test : Boolean := True;
    Command : Character;
-   Wait : Timeouts := 60.0; -- Wait 60 s for receive;
+   Discard_Time : Timeouts := Seconds (60);
+   -- Message stale after 60 s for receive;
    Loop_Count, Loop_Limit : Positive;
    --  32 bit number represented in hex 16#...#
    Tx_Buffer : String (1 .. 11);
    Loop_Test_Result : Boolean;
 
 begin -- Test_MQTT_Client
-   Put_Line ("Test MQTT client version 20260424");
+   Put_Line ("Test MQTT client version 20260427");
    if Argument_Count < 3 then
       raise Program_Error with 
          "Missing Broker_Host_Name, User_Name and Password";
@@ -40,7 +43,7 @@ begin -- Test_MQTT_Client
       QoS := 0;
    end if; -- Argument_Count = 4
    Put_Line ("The broker " & Argument (1) & " must support topics " &
-             Topic_1 & " and " & Topic_2);
+             Topic_1 & ", " & Topic_2 & " and " & Topic_loop);
    Connect_Tx (Argument (1), Argument (2), Argument (3), Topic_1, Tx_1, QoS);
    Put_Line (Topic_1 & " connected for publish");
    Connect_Rx (Argument (1), Argument (2), Argument (3), Topic_1, Rx_1, QoS);
@@ -74,38 +77,43 @@ begin -- Test_MQTT_Client
             New_Line;
          when 'b' | 'B' =>
             Put_Line ("Received message from " & Topic_1 & " """ &
-                      Receive (Rx_1, Wait) & """");
+                      Receive (Rx_1, Discard_Time) & """");
          when 'c' | 'C' =>
             Put ("Message to send to " & Topic_2 & " >");
             Send (Tx_2, Get_Line);
             New_Line;
          when 'd' | 'D' =>
             Put_Line ("Received message from " & Topic_2 & " """ &
-                      Receive (Rx_2, Wait) & """");
+                      Receive (Rx_2, Discard_Time) & """");
          when 'l' | 'L' =>
             Put ("Length of loop test: ");
             Positive_IO.Get (Loop_Limit);
             Loop_Count := 1;
+            Tx_Buffer := (others => '-');
+            Send (Tx_Loop, Tx_Buffer);
+            delay 0.1;
             loop -- One loop test
                Positive_IO.Put (Tx_Buffer, Loop_Count, 16);
                Send (Tx_Loop, Tx_Buffer);
-               declare -- Receive_String declation block
-                  Receive_String : String := Receive (Rx_Loop, 1.0);
-               begin -- Receive_String declation block
-                  if Receive_String'Length = 0 then
-                     Put_Line ("Recieve timeout");
-                     exit;
-                  end if; -- Receive_String'Length > 0
-                  Loop_Test_Result := Tx_Buffer = Receive_String;
-               end; -- Receive_String declation block
+               loop -- wait for match
+                  declare -- Receive_String declation block
+                     Receive_String : String := Receive (Rx_Loop, Seconds (1));
+                  begin -- Receive_String declation block
+                     if Receive_String'Length = 0 then
+                        Put_Line ("Recieve timeout");
+                     end if; -- Receive_String'Length > 0
+                     Loop_Test_Result := Tx_Buffer = Receive_String;
+                     exit when Loop_Test_Result or else Receive_String = "";
+                  end; -- Receive_String declation block
+               end loop; -- Wait for match
                if (Loop_Count * 80) mod Loop_Limit = 0 then
                   Put ('#');
                end if; -- (Count_Limit / 80) mod Count_Limit = 0
                exit when not Loop_Test_Result or Loop_Count = Loop_Limit;
                Loop_Count := @ + 1;
             end loop; -- One loop test
+            New_Line;
             if Loop_Test_Result then
-            New_line;
                Put_Line ("Loop test passed");
             else
                Put_Line ("Loop test failed at" & Loop_Count'Img);

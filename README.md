@@ -16,11 +16,11 @@ Provides for setup and reading of data from the Analogue Devices AD7091R2 two ch
 This package uses the SPI interface and requires hardware (monostable etc) to reduce the read pulse width from the minimum pulse width available through the file system GPIO to the 500 ns required for the ADC.
 
 ## TIC5940 Package
-Is a device driver for Texas Instruments TIC5940 sixteen channel PWM LED driver. Can be used to operate multiple cascaded ICs to drive large nimbers of LEDs. Provides 4096 levels of PWM brightness control and 63 levels of analogue current setting to match individual LED brightness.
+Is a device driver for Texas Instruments TIC5940 sixteen channel PWM LED driver. Can be used to operate multiple cascaded ICs to drive large numbers of LEDs. Provides 4096 levels of PWM brightness control and 63 levels of analogue current setting to match individual LED brightness. It can support seven segnent displays.
 
 Additional hardware is needed to clock the TIC5940 and service the Blank and XLATE inputs on each display cycle, note the speed required is too high for the RPI to do directly and maintain stsble brightness.
 
-The package can also drive two seven segment displays including the decimal points. Arbitart mapping of segments is provided potentially symplifying the PCB layout.
+The package can also drive two seven segment displays, displaying the usual decimal digits and a subset of the Latin_1 character set, including the decimal points. Arbitrary mapping of segments is provided potentially symplifying the PCB layout.
 
 ## ANSI_Console Package
 Provides basic ANSI terminal cursor positioning and setting of text colour etc.
@@ -35,8 +35,8 @@ The back light can be turned on, off and have its brightness controlled.
 
 The cursor can be positioned, be visible or hidden. writing of full lines, single characters or strings is provided.
 
-## MQTT.Subcriber Package
-Provides a simple MQTT subscriber which returns either a String or binary data. It depends on libmosquitto and operates asynchronously internally queueing messages. The interface is blocking, the Receive function will not return if there is no message in the queue.
+## MQTT_Client Package
+Provides a simple MQTT publisher and subscriber. It depends on libmosquitto. The interface is non blocking, the Receive function will return immediately Multiple Brokers and Topics are supported for both Publish and Subscribe.
 A thin Ada binding to libmosquitto is provided by mqtt_library.ads, mostly automatically generated but some editing has been done to make it more or less self contained.
 
 ## Machine_Properties Package
