@@ -51,6 +51,30 @@ package body MQTT_Client is
 
    type Connection_Types is (Publish, Subscribe);
 
+   protected type Message_Semaphores is
+      entry Wait;
+      procedure Signal;
+   private
+      Received : Boolean := False;
+   end Message_Semaphores;
+
+   protected body Message_Semaphores is
+
+      entry Wait when Received is
+
+      begin -- Wait
+         Received := False;
+      end wait;
+
+      procedure Signal is
+
+      begin -- Signal;
+         Received := True;
+      end Signal;
+   end Message_Semaphores;
+
+   type Semaphore_Pointers is access Message_Semaphores;
+
    type Connections is record
       Connection_Type : Connection_Types := Publish;
       Handle_Pointer : Handle_Pointers := null;
@@ -60,6 +84,7 @@ package body MQTT_Client is
       Connected : Boolean := False;
       Message : Unbounded_String := Null_Unbounded_String;
       Time_Stamp : Time;
+      Semaphore_Pointer : Semaphore_Pointers := null;
    end record; -- Connections
 
    package Connection_Stores is new
@@ -128,6 +153,8 @@ package body MQTT_Client is
       function Get_Mesage (Handle : MQTT_Handle;
                            Timeout : Timeouts) return String;
 
+      function Get_Semaphore (Handle : MQTT_Handle) return Semaphore_Pointers;
+
    private
       Handle_Store : MQTT_Handle := MQTT_Handle'First;
       Connection_Store : Connection_Stores.Map;
@@ -157,6 +184,7 @@ package body MQTT_Client is
          end if; -- Connection.Mosq = null
          Connection.Qos := Qos;
          Connection.Time_Stamp := Clock;
+         Connection.Semaphore_Pointer := new Message_Semaphores;
          Insert (Connection_Store, Handle_Store, Connection);
          Handle_Store := @ + 1;
       end Create;
@@ -186,6 +214,7 @@ package body MQTT_Client is
          --  allocated in libmosquitto and is deallocated on return;
          Connection_Store (Handle).Message := To_Unbounded_String (Data);
          Connection_Store (Handle).Time_Stamp := Clock;
+         Connection_Store (Handle).Semaphore_Pointer.Signal;
       end Set_Message;
 
       procedure Delete (Handle : MQTT_Handle) is
@@ -233,6 +262,9 @@ package body MQTT_Client is
             return "";
          end if; -- Connected_Store (Handle).Message = Null_Unbounded_String
       end Get_Mesage;
+
+      function Get_Semaphore (Handle : MQTT_Handle) return Semaphore_Pointers is
+        (Connection_Store (Handle).Semaphore_Pointer);
 
    end Store;
 
@@ -384,6 +416,33 @@ procedure Connect_Tx (Broker_Host : String;
       end if; -- not Store.Is_Valid (Handle, Subscribe)
       return Store.Get_Mesage (Handle, Timeout);
    end Receive;
+
+   function Receive_Blocking (Handle : MQTT_Handle;
+                              Wait_Time : Time_Span;
+                              Stale_Time : Time_Span)
+                              return String is
+
+      --  The function, will return immediately if a message is available or
+      --  later when either a message is received or Wait_Time expires. In
+      --  general a zero length string will be returned if a Wait_Time timeout
+      --  occurs. A zero length string will also be returned if a message has
+      --  been received before the function is called and Stale_Time has
+      --  expired. If Stale_Time is greater than Wait_Time, the same message
+      --  may be returned more than once when the function is called repeatedly.
+
+      Receive_Semaphore : Semaphore_Pointers := Store.Get_Semaphore (Handle);
+
+   begin -- Receive_Blocking
+      if not Store.Is_Valid (Handle, Subscribe) then
+         raise MQTT_Error with "Receive_Blocking invalid Handle";
+      end if; -- not Store.Is_Valid (Handle, Subscribe)
+      select
+         Receive_Semaphore.Wait;
+      or
+         delay To_Duration (Wait_Time);
+      end select;
+      return Store.Get_Mesage (Handle, Stale_Time);
+   end Receive_Blocking;
 
    procedure Disconnect (Handle : MQTT_Handle) is
 

@@ -2,8 +2,9 @@
 
 --  Author    : David Haley
 --  Created   : 09/03/2026
---  Last_Edit : 26/04/2026
+--  Last_Edit : 27/04/2026
 
+--  20260427 : Receive_Blocking added;
 --  20260426 : Receive made non blocking, libmosquitto buffers subscribed
 --  topics so strictly the buffering in this unit was not required, thus
 --  eliminating the need of an additional thread per subscribed topic.
@@ -62,6 +63,19 @@ package MQTT_Client is
    --  The Timeout is a stale data timeout. If the last received message
    --  is more than the timeout old, a zero length String is returned.
    --  Unread messages will be disposed of, only the most recent is available.
+    
+   function Receive_Blocking (Handle : MQTT_Handle;
+                              Wait_Time : Time_Span;
+                              Stale_Time : Time_Span)
+                              return String;
+
+   --  The function, will return immediately if a message is available or later
+   --  when either a message is received or Wait_Time expires. In general a
+   --  zero length string will be returned if a Wait_Time timeout occurs.
+   --  A zero length string will also be returned if a message has been
+   --  received before the function is called and Stale_Time has expired.
+   --  If Stale_Time is greater than Wait_Time, the same message may be
+   --  returned more than once when the function is called repeatedly.
 
    procedure Disconnect (Handle : MQTT_Handle);
    --  Disconnects either a publisher or subscriber.

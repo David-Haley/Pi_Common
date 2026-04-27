@@ -89,23 +89,18 @@ begin -- Test_MQTT_Client
             Put ("Length of loop test: ");
             Positive_IO.Get (Loop_Limit);
             Loop_Count := 1;
-            Tx_Buffer := (others => '-');
-            Send (Tx_Loop, Tx_Buffer);
-            delay 0.1;
             loop -- One loop test
                Positive_IO.Put (Tx_Buffer, Loop_Count, 16);
                Send (Tx_Loop, Tx_Buffer);
-               loop -- wait for match
-                  declare -- Receive_String declation block
-                     Receive_String : String := Receive (Rx_Loop, Seconds (1));
-                  begin -- Receive_String declation block
-                     if Receive_String'Length = 0 then
-                        Put_Line ("Recieve timeout");
-                     end if; -- Receive_String'Length > 0
-                     Loop_Test_Result := Tx_Buffer = Receive_String;
-                     exit when Loop_Test_Result or else Receive_String = "";
-                  end; -- Receive_String declation block
-               end loop; -- Wait for match
+               declare -- Receive_String declation block
+                  Receive_String : String :=
+                    Receive_Blocking (Rx_Loop, Seconds (2), Seconds (1));
+               begin -- Receive_String declation block
+                  if Receive_String'Length = 0 then
+                     Put_Line ("Recieve timeout");
+                  end if; -- Receive_String'Length > 0
+                  Loop_Test_Result := Tx_Buffer = Receive_String;
+               end; -- Receive_String declation block
                if (Loop_Count * 80) mod Loop_Limit = 0 then
                   Put ('#');
                end if; -- (Count_Limit / 80) mod Count_Limit = 0
