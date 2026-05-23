@@ -2,8 +2,9 @@
 
 --  Author    : David Haley
 --  Created   : 09/03/2026
---  Last_Edit : 26/04/2026
+--  Last_Edit : 24/05/2026
 
+--  20260526 : Removal of various compiler warnings.
 --  20260426 : Receive made non blocking, libmosquitto buffers subscribed
 --  topics so strictly the buffering in this unit was not required, thus
 --  eliminating the need of an additional thread per subscribed topic.
@@ -18,7 +19,6 @@ with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Containers.Ordered_Maps;
 with Ada.Task_Identification; use Ada.Task_Identification;
 with Ada.Unchecked_Deallocation;
-with Ada.Containers.Ordered_Maps;
 with Interfaces.C.Strings; use Interfaces.C.Strings;
 with System;
 with System.Address_To_Access_Conversions;
@@ -64,7 +64,7 @@ package body MQTT_Client is
 
       begin -- Wait
          Received := False;
-      end wait;
+      end Wait;
 
       procedure Signal is
 
@@ -182,7 +182,7 @@ package body MQTT_Client is
          if Connection.Mosq = null then
             raise MQTT_Error with "failed to create mosquitto";
          end if; -- Connection.Mosq = null
-         Connection.Qos := Qos;
+         Connection.QoS := QoS;
          Connection.Time_Stamp := Clock;
          Connection.Semaphore_Pointer := new Message_Semaphores;
          Insert (Connection_Store, Handle_Store, Connection);
@@ -227,7 +227,7 @@ package body MQTT_Client is
       function Is_Valid (Handle : MQTT_Handle;
                          Connection_Type : Connection_Types) return Boolean is
         (Contains (Connection_Store, Handle) and then
-        (Connection_Store (Handle).Connection_type = Connection_type and
+        (Connection_Store (Handle).Connection_Type = Connection_Type and
          Connection_Store (Handle).Connected));
 
       function Contains (Handle : MQTT_Handle) return Boolean is
@@ -242,7 +242,7 @@ package body MQTT_Client is
         (To_String (Connection_Store (Handle).Topic));
 
       function Get_Qos (Handle : MQTT_Handle) return QoSs is
-        (Connection_Store (Handle).Qos);
+        (Connection_Store (Handle).QoS);
 
       function Get_Mosq (Handle : MQTT_Handle) return access mosquitto is
         (Connection_Store (Handle).Mosq);
@@ -268,7 +268,7 @@ package body MQTT_Client is
 
    end Store;
 
-procedure Connect_Tx (Broker_Host : String;
+   procedure Connect_Tx (Broker_Host : String;
                          User_Name : String;
                          Password : String;
                          Topic : String;
@@ -276,9 +276,10 @@ procedure Connect_Tx (Broker_Host : String;
                          QoS : QoSs := 0;
                          Keep_Alive_Time : Keep_Alive_Times := 60) is
 
-   --  Connects to broker to permit publication of Topic.
-   --  Can only be called once, unless there is a previous call to Disconnect.
-   --  Returns Handle which nust be used with Send and Disconnect
+      --  Connects to broker to permit publication of Topic.
+      --  Can only be called once, unless there is a previous call to
+      --  Disconnect.
+      --  Returns Handle which nust be used with Send and Disconnect
 
       Return_Code : int;
       Broker_Pointer, User_Pointer, Password_Pointer,
@@ -294,7 +295,7 @@ procedure Connect_Tx (Broker_Host : String;
       User_Pointer := New_String (User_Name);
       Password_Pointer := New_String (Password);
       Return_Code := mosquitto_username_pw_set (Store.Get_Mosq (Handle),
-                                                User_Pointer,              Password_Pointer);
+                                                User_Pointer, Password_Pointer);
       Free (User_Pointer);
       Free (Password_Pointer);
       if Return_Code /= MOSQ_ERR_SUCCESS then
@@ -369,7 +370,7 @@ procedure Connect_Tx (Broker_Host : String;
 
    begin -- Connect_Rx
       Client_Id_Pointer := New_String (Client_Id);
-      Store.Create (Handle, Subscribe, Topic, Qos, Client_Id_Pointer);
+      Store.Create (Handle, Subscribe, Topic, QoS, Client_Id_Pointer);
       Free (Client_Id_Pointer);
       User_Pointer := New_String (User_Name);
       Password_Pointer := New_String (Password);
@@ -430,7 +431,8 @@ procedure Connect_Tx (Broker_Host : String;
       --  expired. If Stale_Time is greater than Wait_Time, the same message
       --  may be returned more than once when the function is called repeatedly.
 
-      Receive_Semaphore : Semaphore_Pointers := Store.Get_Semaphore (Handle);
+      Receive_Semaphore : constant Semaphore_Pointers :=
+        Store.Get_Semaphore (Handle);
 
    begin -- Receive_Blocking
       if not Store.Is_Valid (Handle, Subscribe) then
@@ -482,8 +484,6 @@ procedure Connect_Tx (Broker_Host : String;
 
    pragma Warnings (On, "-gnatwf");
 
-      Topic_Pointer : chars_ptr;
-      Local_Rc : int;
       Handle_Pointer : constant Handle_Pointers := To_Pointer (Obj);
 
    begin -- Tx_On_Connec
