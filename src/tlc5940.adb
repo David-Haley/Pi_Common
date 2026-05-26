@@ -17,8 +17,9 @@
 
 -- Author    : David Haley
 -- Created   : 08/08/2017
--- Last Edit : 29/03/2026
+-- Last Edit : 26/05/2026
 
+--  20260526 : Compiler warnings removed.
 --  20260329 : Provision for the display of the Latin_1 characters. All 
 --  characters valid, those not capable of display mapped to ' '.
 -- 20250514 : Renaming of AL_Write_LEDs to AL_Write_LED, reduced Settling time
@@ -51,8 +52,6 @@
 with Ada.Real_Time; use Ada.Real_Time;
 with Interfaces; use Interfaces;
 with Interfaces.C; use Interfaces.C;
-with SPI_Interface; use SPI_Interface;
-with RPi_GPIO; use RPi_GPIO;
 
 package  body TLC5940 is
 
@@ -64,8 +63,8 @@ package  body TLC5940 is
    type DC_Buffers is array (DC_Byte_Indices) of aliased Unsigned_8;
 
    type Buffers is record
-      GS_TX : GS_Buffers := (others=> 0);
-      DC_TX : DC_Buffers := (others => Unsigned_8'Last);
+      GS_TX : GS_Buffers := [others=> 0];
+      DC_TX : DC_Buffers := [others => Unsigned_8'Last];
       -- Dot Correction Shift Register Buffer
       -- initialised to full brightness
       GS_RX : GS_Buffers; -- required for SPI_Transfer
@@ -81,7 +80,7 @@ package  body TLC5940 is
       end record; -- GS_Table_Element
 
    GS_Table : constant array (LED_Channels) of GS_Table_Element :=
-     (
+     [
       (23, 22, True), (21, 22, False),
       (20, 19, True), (18, 19, False),
       (17, 16, True), (15, 16, False),
@@ -90,7 +89,7 @@ package  body TLC5940 is
       (08, 07, True), (06, 07, False),
       (05, 04, True), (03, 04, False),
       (02, 01, True), (00, 01, False)
-     );
+     ];
    -- High_Nibble True means that the four most significant bits of the
    -- greyscale value for that LED occupy the low Nibble. Conversly
    -- High_Nibble False means that the four least significant bits of the
@@ -105,12 +104,12 @@ package  body TLC5940 is
    High_Nibble_Mask : constant Unsigned_16 := 2#0000000011110000#;
 
    DC_Table : constant array (LED_Channels) of DC_Table_Element :=
-     (
+     [
       (11, 11), (11, 10), (10, 09), (09, 09),
       (08, 08), (08, 07), (07, 06), (06, 06),
       (05, 05), (05, 04), (04, 03), (03, 03),
       (02, 02), (02, 01), (01, 00), (00, 00)
-     );
+     ];
 
    DC_0_Mask    : constant Unsigned_8 := 2#00111111#;
    DC_1_Lo_Mask : constant Unsigned_8 := 2#11000000#;
@@ -132,106 +131,106 @@ package  body TLC5940 is
          --   -d-Dp
 
    Character_Map : constant array (Character, Segments) of Boolean :=
-      ( --      -a-    -b-    -c-    -d-    -e-    -f-    -g-     Dp
-      '"'  => (False,  True, False, False, False,  True, False, False),
-      '#'  => ( True, False, False,  True, False, False,  True, False),
-      '$'  => ( True, False,  True,  True, False,  True,  True, False),
-      '%'  => ( True, False,  True,  True, False,  True, False, False),
-      '!'  => (False,  True,  True, False, False, False, False,  True),
-      '&'  => (False, False, False, False,  True,  True,  True, False),
-      '''  => (False, False, False, False, False,  True, False, False),
-      '('  => ( True, False, False,  True,  True,  True, False, False),
-      ')'  => ( True,  True,  True,  True, False, False, False, False),
-      '*'  => (False, False,  True, False,  True, False, False, False),
-      '+'  => (False, False, False, False,  True,  True,  True, False),
-      ','  => (False, False,  True, False, False, False, False, False),
-      '-'  => (False, False, False, False, False, False,  True, False),
-      '.'  => (False, False, False, False, False, False, False,  True),
-      '/'  => (False,  True, False, False,  True, False,  True, False),
+      [ --      -a-    -b-    -c-    -d-    -e-    -f-    -g-     Dp
+      '"'  => [False,  True, False, False, False,  True, False, False],
+      '#'  => [ True, False, False,  True, False, False,  True, False],
+      '$'  => [ True, False,  True,  True, False,  True,  True, False],
+      '%'  => [ True, False,  True,  True, False,  True, False, False],
+      '!'  => [False,  True,  True, False, False, False, False,  True],
+      '&'  => [False, False, False, False,  True,  True,  True, False],
+      '''  => [False, False, False, False, False,  True, False, False],
+      '('  => [ True, False, False,  True,  True,  True, False, False],
+      ')'  => [ True,  True,  True,  True, False, False, False, False],
+      '*'  => [False, False,  True, False,  True, False, False, False],
+      '+'  => [False, False, False, False,  True,  True,  True, False],
+      ','  => [False, False,  True, False, False, False, False, False],
+      '-'  => [False, False, False, False, False, False,  True, False],
+      '.'  => [False, False, False, False, False, False, False,  True],
+      '/'  => [False,  True, False, False,  True, False,  True, False],
       --        -a-    -b-    -c-    -d-    -e-    -f-    -g-     Dp
-      '0'  => ( True,  True,  True,  True,  True,  True, False, False),
-      '1'  => (False,  True,  True, False, False, False, False, False),
-      '2'  => ( True,  True, False,  True,  True, False,  True, False),
-      '3'  => ( True,  True,  True,  True, False, False,  True, False),
-      '4'  => (False,  True,  True, False, False,  True,  True, False),
-      '5'  => ( True, False,  True,  True, False,  True,  True, False),
-      '6'  => ( True, False,  True,  True,  True,  True,  True, False),
-      '7'  => ( True,  True,  True, False, False, False, False, False),
-      '8'  => ( True,  True,  True,  True,  True,  True,  True, False),
-      '9'  => ( True,  True,  True,  True, False,  True,  True, False),
+      '0'  => [ True,  True,  True,  True,  True,  True, False, False],
+      '1'  => [False,  True,  True, False, False, False, False, False],
+      '2'  => [ True,  True, False,  True,  True, False,  True, False],
+      '3'  => [ True,  True,  True,  True, False, False,  True, False],
+      '4'  => [False,  True,  True, False, False,  True,  True, False],
+      '5'  => [ True, False,  True,  True, False,  True,  True, False],
+      '6'  => [ True, False,  True,  True,  True,  True,  True, False],
+      '7'  => [ True,  True,  True, False, False, False, False, False],
+      '8'  => [ True,  True,  True,  True,  True,  True,  True, False],
+      '9'  => [ True,  True,  True,  True, False,  True,  True, False],
       --        -a-    -b-    -c-    -d-    -e-    -f-    -g-     Dp
-      '<'  => (False, False, False,  True,  True, False, False, False),
-      '='  => (False, False, False,  True, False, False,  True, False),
-      '>'  => (False, False,  True,  True, False, False, False, False),
-      '?'  => ( True,  True,  True, False, False,  True, False,  True),
+      '<'  => [False, False, False,  True,  True, False, False, False],
+      '='  => [False, False, False,  True, False, False,  True, False],
+      '>'  => [False, False,  True,  True, False, False, False, False],
+      '?'  => [ True,  True,  True, False, False,  True, False,  True],
       --        -a-    -b-    -c-    -d-    -e-    -f-    -g-     Dp
-      'A'  => ( True,  True,  True, False,  True,  True,  True, False),
-      'B'  => (False, False,  True,  True,  True,  True,  True, False),
-      'C'  => (False, False, False,  True,  True, False,  True, False),
-      'D'  => (False,  True,  True,  True,  True, False,  True, False),
-      'E'  => ( True, False, False,  True,  True,  True,  True, False),
-      'F'  => ( True, False, False, False,  True,  True,  True, False),
-      'G'  => ( True, False,  True,  True,  True,  True, False, False),
-      'H'  => (False, False,  True, False,  True,  True,  True, False),
-      'I'  => (False,  True,  True, False, False, False, False, False),
-      'J'  => (False,  True,  True,  True,  True, False, False, False),
-      'K'  => (False,  True, False,  True,  True,  True,  True, False),
-      'L'  => (False, False, False,  True,  True,  True, False, False),
-      'M'  => ( True, False,  True, False,  True, False,  True, False),
-      'N'  => (False, False,  True, False,  True, False,  True, False),
-      'O'  => (False, False,  True,  True,  True, False,  True, False),
-      'P'  => ( True,  True, False, False,  True,  True,  True, False),
-      'Q'  => ( True,  True,  True, False, False,  True,  True, False),
-      'R'  => (False, False, False, False,  True, False,  True, False),
-      'S'  => ( True, False,  True,  True, False,  True,  True, False),
-      'T'  => (False, False, False,  True,  True,  True,  True, False),
-      'U'  => (False, False,  True,  True,  True, False, False, False),
-      'V'  => (False, False,  True,  True,  True, False, False, False),
-      'W'  => (False,  True, False,  True, False,  True,  True, False),
-      'X'  => (False, False,  True, False,  True, False, False, False),
-      'Y'  => (False,  True,  True,  True, False,  True,  True, False),
-      'Z'  => ( True,  True, False,  True,  True, False,  True, False),
+      'A'  => [ True,  True,  True, False,  True,  True,  True, False],
+      'B'  => [False, False,  True,  True,  True,  True,  True, False],
+      'C'  => [False, False, False,  True,  True, False,  True, False],
+      'D'  => [False,  True,  True,  True,  True, False,  True, False],
+      'E'  => [ True, False, False,  True,  True,  True,  True, False],
+      'F'  => [ True, False, False, False,  True,  True,  True, False],
+      'G'  => [ True, False,  True,  True,  True,  True, False, False],
+      'H'  => [False, False,  True, False,  True,  True,  True, False],
+      'I'  => [False,  True,  True, False, False, False, False, False],
+      'J'  => [False,  True,  True,  True,  True, False, False, False],
+      'K'  => [False,  True, False,  True,  True,  True,  True, False],
+      'L'  => [False, False, False,  True,  True,  True, False, False],
+      'M'  => [ True, False,  True, False,  True, False,  True, False],
+      'N'  => [False, False,  True, False,  True, False,  True, False],
+      'O'  => [False, False,  True,  True,  True, False,  True, False],
+      'P'  => [ True,  True, False, False,  True,  True,  True, False],
+      'Q'  => [ True,  True,  True, False, False,  True,  True, False],
+      'R'  => [False, False, False, False,  True, False,  True, False],
+      'S'  => [ True, False,  True,  True, False,  True,  True, False],
+      'T'  => [False, False, False,  True,  True,  True,  True, False],
+      'U'  => [False, False,  True,  True,  True, False, False, False],
+      'V'  => [False, False,  True,  True,  True, False, False, False],
+      'W'  => [False,  True, False,  True, False,  True,  True, False],
+      'X'  => [False, False,  True, False,  True, False, False, False],
+      'Y'  => [False,  True,  True,  True, False,  True,  True, False],
+      'Z'  => [ True,  True, False,  True,  True, False,  True, False],
       --        -a-    -b-    -c-    -d-    -e-    -f-    -g-     Dp
-      '['  => ( True, False, False,  True,  True,  True, False, False),
-      '\'  => (False, False,  True, False, False,  True,  True, False),
-      ']'  => ( True,  True,  True,  True, False, False, False, False),
-      '^'  => ( True,  True, False, False, False,  True, False, False),
-      '_'  => (False, False, False,  True, False, False, False, False),
-      '`'  => (False, False, False, False, False,  True, False, False),
+      '['  => [ True, False, False,  True,  True,  True, False, False],
+      '\'  => [False, False,  True, False, False,  True,  True, False],
+      ']'  => [ True,  True,  True,  True, False, False, False, False],
+      '^'  => [ True,  True, False, False, False,  True, False, False],
+      '_'  => [False, False, False,  True, False, False, False, False],
+      '`'  => [False, False, False, False, False,  True, False, False],
       --        -a-    -b-    -c-    -d-    -e-    -f-    -g-     Dp
-      'a'  => ( True,  True,  True, False,  True,  True,  True, False),
-      'b'  => (False, False,  True,  True,  True,  True,  True, False),
-      'c'  => (False, False, False,  True,  True, False,  True, False),
-      'd'  => (False,  True,  True,  True,  True, False,  True, False),
-      'e'  => ( True, False, False,  True,  True,  True,  True, False),
-      'f'  => ( True, False, False, False,  True,  True,  True, False),
-      'g'  => ( True, False,  True,  True,  True,  True, False, False),
-      'h'  => (False, False,  True, False,  True,  True,  True, False),
-      'i'  => (False,  True,  True, False, False, False, False, False),
-      'j'  => (False,  True,  True,  True,  True, False, False, False),
-      'k'  => (False,  True, False,  True,  True,  True,  True, False),
-      'l'  => (False, False, False,  True,  True,  True, False, False),
-      'm'  => ( True, False,  True, False,  True, False,  True, False),
-      'n'  => (False, False,  True, False,  True, False,  True, False),
-      'o'  => (False, False,  True,  True,  True, False,  True, False),
-      'p'  => ( True,  True, False, False,  True,  True,  True, False),
-      'q'  => ( True,  True,  True, False, False,  True,  True, False),
-      'r'  => (False, False, False, False,  True, False,  True, False),
-      's'  => ( True, False,  True,  True, False,  True,  True, False),
-      't'  => (False, False, False,  True,  True,  True,  True, False),
-      'u'  => (False, False,  True,  True,  True, False, False, False),
-      'v'  => (False, False,  True,  True,  True, False, False, False),
-      'w'  => (False,  True, False,  True, False,  True,  True, False),
-      'x'  => (False, False,  True, False,  True, False, False, False),
-      'y'  => (False,  True,  True,  True, False,  True,  True, False),
-      'z'  => ( True,  True, False,  True,  True, False,  True, False),
+      'a'  => [ True,  True,  True, False,  True,  True,  True, False],
+      'b'  => [False, False,  True,  True,  True,  True,  True, False],
+      'c'  => [False, False, False,  True,  True, False,  True, False],
+      'd'  => [False,  True,  True,  True,  True, False,  True, False],
+      'e'  => [ True, False, False,  True,  True,  True,  True, False],
+      'f'  => [ True, False, False, False,  True,  True,  True, False],
+      'g'  => [ True, False,  True,  True,  True,  True, False, False],
+      'h'  => [False, False,  True, False,  True,  True,  True, False],
+      'i'  => [False,  True,  True, False, False, False, False, False],
+      'j'  => [False,  True,  True,  True,  True, False, False, False],
+      'k'  => [False,  True, False,  True,  True,  True,  True, False],
+      'l'  => [False, False, False,  True,  True,  True, False, False],
+      'm'  => [ True, False,  True, False,  True, False,  True, False],
+      'n'  => [False, False,  True, False,  True, False,  True, False],
+      'o'  => [False, False,  True,  True,  True, False,  True, False],
+      'p'  => [ True,  True, False, False,  True,  True,  True, False],
+      'q'  => [ True,  True,  True, False, False,  True,  True, False],
+      'r'  => [False, False, False, False,  True, False,  True, False],
+      's'  => [ True, False,  True,  True, False,  True,  True, False],
+      't'  => [False, False, False,  True,  True,  True,  True, False],
+      'u'  => [False, False,  True,  True,  True, False, False, False],
+      'v'  => [False, False,  True,  True,  True, False, False, False],
+      'w'  => [False,  True, False,  True, False,  True,  True, False],
+      'x'  => [False, False,  True, False,  True, False, False, False],
+      'y'  => [False,  True,  True,  True, False,  True,  True, False],
+      'z'  => [ True,  True, False,  True,  True, False,  True, False],
       --        -a-    -b-    -c-    -d-    -e-    -f-    -g-     Dp
-      '{'  => ( True, False, False,  True,  True,  True, False, False),
-      '|'  => (False,  True,  True, False, False, False, False, False),
-      '}'  => ( True,  True,  True,  True, False, False, False, False),
-      '~'  => (False,  True, False, False,  True, False, False, False),
-      others => (False, False, False, False, False, False, False, False)
-      );
+      '{'  => [ True, False, False,  True,  True,  True, False, False],
+      '|'  => [False,  True,  True, False, False, False, False, False],
+      '}'  => [ True,  True,  True,  True, False, False, False, False],
+      '~'  => [False,  True, False, False,  True, False, False, False],
+      others => [False, False, False, False, False, False, False, False]
+      ];
 
    type Displays is record
       Chip : Chips;
@@ -258,7 +257,7 @@ package  body TLC5940 is
 
       procedure Set_Greyscale (Chip : in Chips;
                                LED_Channel : in LED_Channels;
-                               Greyscale : in GreyScales);
+                               Greyscale : in Greyscales);
       -- Sets the greyscale value for a single LED channel
 
       function Get_Greyscale (Chip : in Chips;
@@ -294,11 +293,11 @@ package  body TLC5940 is
                                Chip : in Chips;
                                Segment_Array : in Segment_Arrays;
                                No_Decimal : in Boolean := False);
-   -- Allows for LED_Chanel assigned to the DP to be used for another purpose
+      -- Allows for LED_Chanel assigned to the DP to be used for another purpose
 
       procedure Set_Character (Display : in Display_7;
                                Char : in Character;
-                               Greyscale : in GreyScales := Greyscales'Last;
+                               Greyscale : in Greyscales := Greyscales'Last;
                                Decimal_Lit : in Boolean := False);
 
       function Get_Character (Display : in Display_7) return Character;
@@ -353,7 +352,7 @@ package  body TLC5940 is
 
    procedure Set_Greyscale (Chip : in Chips;
                             LED_Channel : in LED_Channels;
-                            Greyscale : in GreyScales) is
+                            Greyscale : in Greyscales) is
 
       -- Sets the greyscale value for a single LED channel
 
@@ -443,11 +442,12 @@ package  body TLC5940 is
    end Initialise_Digit;
 
    procedure Set_Character (Display : in Display_7;
-                        Char : in Character;
-                        Greyscale : in GreyScales := Greyscales'Last;
-                        Decimal_Lit : in Boolean := False) is
+                            Char : in Character;
+                            Greyscale : in Greyscales := Greyscales'Last;
+                            Decimal_Lit : in Boolean := False) is
 
-      -- Allows for LED_Channel assigned to the DP to be used for another purpose
+      --  Allows for LED_Channel assigned to the DP to be used for another
+      --  purpose
 
    begin -- Set_Character
       Display_State.Set_Character (Display, Char, Greyscale, Decimal_Lit);
@@ -474,11 +474,9 @@ package  body TLC5940 is
          -- Sets the dot correction value for a single LED channel
 
          First_Byte : Unsigned_8 :=
-           Unsigned_8 (Buffer_Array (Chip).DC_TX (DC_Table (LED_Channel).
-                           First_Byte));
+           Buffer_Array (Chip).DC_TX (DC_Table (LED_Channel).First_Byte);
          Second_Byte : Unsigned_8 :=
-           Unsigned_8 (Buffer_Array (Chip).DC_TX (DC_Table (LED_Channel).
-                           Second_Byte));
+           Buffer_Array (Chip).DC_TX (DC_Table (LED_Channel).Second_Byte);
 
       begin -- Set_Correction
          case LED_Channel mod 4 is
@@ -521,11 +519,9 @@ package  body TLC5940 is
          -- Reads back the dot correction value for a single LED channel
 
          First_Byte : constant Unsigned_8 :=
-           Unsigned_8 (Buffer_Array (Chip).DC_TX (DC_Table (LED_Channel).
-                           First_Byte));
+           Buffer_Array (Chip).DC_TX (DC_Table (LED_Channel).First_Byte);
          Second_Byte : constant Unsigned_8 :=
-           Unsigned_8 (Buffer_Array (Chip).DC_TX (DC_Table (LED_Channel).
-                           Second_Byte));
+           Buffer_Array (Chip).DC_TX (DC_Table (LED_Channel).Second_Byte);
          Result : Corrections;
 
       begin -- Get_Correction
@@ -550,16 +546,15 @@ package  body TLC5940 is
 
       procedure Set_Greyscale (Chip : in Chips;
                                LED_Channel : in LED_Channels;
-                               Greyscale : in GreyScales) is
+                               Greyscale : in Greyscales) is
 
          -- Sets the greyscale value for a single LED channel
 
          Two_Nibble_Store : Unsigned_8;
 
-         Start_Mask : constant  Greyscales := 2#0000100000000000#;
       begin -- Set_Greyscale
-         Two_Nibble_Store := Unsigned_8
-           (Buffer_Array (Chip).GS_TX (GS_Table (Led_Channel).Nibble_Address));
+         Two_Nibble_Store :=
+           Buffer_Array (Chip).GS_TX (GS_Table (LED_Channel).Nibble_Address);
          if GS_Table (LED_Channel).High_Nibble then
             Two_Nibble_Store := Two_Nibble_Store and
               Unsigned_8 (High_Nibble_Mask);
@@ -569,7 +564,7 @@ package  body TLC5940 is
             -- Greyscale value are to be written.
             Two_Nibble_Store := Two_Nibble_Store or Unsigned_8
               (Shift_Right (Greyscale, 8) and Low_Nibble_Mask);
-            Buffer_Array (Chip).GS_TX (GS_Table (Led_Channel).Byte_Address) :=
+            Buffer_Array (Chip).GS_TX (GS_Table (LED_Channel).Byte_Address) :=
               Unsigned_8 (Greyscale and Byte_Mask);
             -- Eight least significant bits of the Greyscale value form the byte
             -- field of the buffer.
@@ -582,10 +577,10 @@ package  body TLC5940 is
             -- value are to be written
             Two_Nibble_Store := Two_Nibble_Store or
               Unsigned_8 (Shift_Left (Greyscale, 4) and High_Nibble_Mask);
-            Buffer_Array (Chip).GS_TX (GS_Table (Led_Channel).Byte_Address) :=
+            Buffer_Array (Chip).GS_TX (GS_Table (LED_Channel).Byte_Address) :=
               Unsigned_8 (Shift_Right (Greyscale, 4) and Byte_Mask);
          end if; -- GS_Table (LED_Channel).High_Nibble
-         Buffer_Array (Chip).GS_TX (GS_Table (Led_Channel).Nibble_Address) :=
+         Buffer_Array (Chip).GS_TX (GS_Table (LED_Channel).Nibble_Address) :=
            Two_Nibble_Store;
       end Set_Greyscale;
 
@@ -600,19 +595,19 @@ package  body TLC5940 is
       begin -- Get_Greyscale
          if GS_Table (LED_Channel).High_Nibble then
             Result :=  Low_Nibble_Mask and Unsigned_16
-              (Buffer_Array (Chip).GS_TX (GS_Table (Led_Channel).
+              (Buffer_Array (Chip).GS_TX (GS_Table (LED_Channel).
                    Nibble_Address));
             Result := Shift_Left (Result, 8);
             Result := Result or Unsigned_16
-              (Buffer_Array (Chip).GS_TX (GS_Table (Led_Channel).Byte_Address));
+              (Buffer_Array (Chip).GS_TX (GS_Table (LED_Channel).Byte_Address));
          else
             Result :=
               Shift_Left (Unsigned_16 (Buffer_Array (Chip).GS_TX
-                          (GS_Table (Led_Channel).Byte_Address)), 4);
+                          (GS_Table (LED_Channel).Byte_Address)), 4);
             Result :=  Result or
               Shift_Right (High_Nibble_Mask and
                              Unsigned_16 (Buffer_Array (Chip).
-                                   GS_TX (GS_Table (Led_Channel).
+                                   GS_TX (GS_Table (LED_Channel).
                                    Nibble_Address)), 4);
          end if; -- GS_Table (LED_Channel).High_Nibble
          return Result;
@@ -622,10 +617,10 @@ package  body TLC5940 is
 
          -- Transfers dot correction data to all the cascaded chips.
 
-         C_Return : Int;
+         C_Return : int;
          Transfer : Buffers;
          TX_Ptr : constant access Unsigned_8 := Transfer.DC_TX (0)'Access;
-         Rx_Ptr : constant access Unsigned_8 := Transfer.DC_RX (0)'Access;
+         RX_Ptr : constant access Unsigned_8 := Transfer.DC_RX (0)'Access;
 
       begin -- Write_Corrections
          Corrections_Changed := True;
@@ -656,9 +651,9 @@ package  body TLC5940 is
 
          -- Transfers the greyscale data to all the cascaded chips.
 
-         C_Return : Int;
+         C_Return : int;
          Transfer : Buffers;
-         TX_Ptr : constant access Unsigned_8 := Transfer.GS_TX (0)'Access;
+         Tx_Ptr : constant access Unsigned_8 := Transfer.GS_TX (0)'Access;
          Rx_Ptr : constant access Unsigned_8 := Transfer.GS_RX (0)'Access;
 
       begin -- Write_LEDs
@@ -668,20 +663,19 @@ package  body TLC5940 is
             for I in reverse Chips loop
                -- first chip in string, last sent!
                Transfer.GS_TX := Buffer_Array (I).GS_TX;
-               C_Return := SPI_Transfer (TX_Ptr, RX_Ptr,
-               GS_Byte_Indices'Last + 1);
-            if C_Return /= 0 then
-               raise SPI_Error with "Failed Write_LEDs, returned:" &
-                 C_Return'Img;
-            end if; -- C_Return /= 0
+               C_Return := SPI_Transfer (Tx_Ptr, Rx_Ptr,
+                                         GS_Byte_Indices'Last + 1);
+               if C_Return /= 0 then
+                  raise SPI_Error with "Failed Write_LEDs, returned:" &
+                  C_Return'Img;
+               end if; -- C_Return /= 0
                Buffer_Array (I).GS_RX := Transfer.GS_RX;
             end loop; -- for I in Chips
             exit when not Corrections_Changed;
             -- transfer twice if corrections were applied in the last cycle;
             Corrections_Changed := False;
          end loop; -- repeat transfer
-         Write_Pin (Pin_Low, XLAT_Pin);
-         Write_Pin (Pin_High, XLAT_Pin);
+         Strobe_Low (XLAT_Pin);
       end Write_LEDs;
 
       procedure Blank_LEDs is
@@ -785,7 +779,7 @@ package  body TLC5940 is
 
       procedure Set_Character (Display : in Display_7;
                                Char : in Character;
-                               Greyscale : in GreyScales := Greyscales'Last;
+                               Greyscale : in Greyscales := Greyscales'Last;
                                Decimal_Lit : in Boolean := False) is
 
       begin -- Set_Character
@@ -803,7 +797,7 @@ package  body TLC5940 is
             end loop; -- S in Segments range Segment_a .. Segment_g
             if not Display_Buffer (Display).No_Dp_Segment then
                Display_Buffer (Display).Decimal_Lit :=
-                 Decimal_Lit or Character_Map (Char, Segment_Dp);
+                 Decimal_Lit or Character_Map (Char, Segment_DP);
                if Display_Buffer (Display).Decimal_Lit then
                   Set_Greyscale (Display_Buffer (Display).Chip,
                                  Display_Buffer (Display).
@@ -846,7 +840,7 @@ package  body TLC5940 is
    end Display_State;
 
    procedure Initialize (SPI_State : in out SPI_States) is
-      -- Initialises both the GPIO pins used to interface to the  TIC5940s and
+      -- Initialises both the GPIO pins used to interface to the TIC5940s and
       -- SPI device. SPI_State is controlled so that the SPI device will be
       -- closed when this package goes out of scope;
    
@@ -885,7 +879,10 @@ package  body TLC5940 is
       SPI_State.Enabled := False;
    end Finalize;
 
+   pragma Warnings (Off, "-gnatwu");
    SPI_State : SPI_States;
-   -- Initialize will be called by the creation of SPI_State.
+   --  Initialize will be called by the creation of SPI_State.
+   --  Warning with respect to unreferenced variable suppresed.
+   pragma Warnings (On, "-gnatwu");
 
 end TLC5940;

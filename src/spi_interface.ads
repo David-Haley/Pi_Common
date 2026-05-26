@@ -1,3 +1,15 @@
+-- An interface to RPI Linux SPI device intended to be callable from Ada.
+-- Copied from an example on the RPi forum.
+-- Mainly automativally generated interface to spi_driver.c
+
+-- Author    : David Haley
+-- Created   : 29/04/2022
+-- Last Edit : 11/10/2025
+
+-- 20260525: Casing of package name and heading comments updated.  
+-- 20251011: Check on word length added
+-- 20220490: Comments corrected
+
 pragma Ada_2012;
 pragma Style_Checks (Off);
 pragma Warnings (Off, "-gnatwu");
@@ -5,16 +17,7 @@ pragma Warnings (Off, "-gnatwu");
 with interfaces; use Interfaces;
 with Interfaces.C; use Interfaces.C;
 
-package spi_interface is
-
-  -- An interface to RPI Linux SPI device intended to be callable from Ada.
-  -- Copied from an example on the RPi forum.
-  -- Mainly automativally generated interface to spi_driver.c
-  -- Author    : David Haley
-  -- Created   : 29/04/2022
-  -- Last Edit : 11/10/2025
-  -- 20251011: Check on word length added
-  -- 20220490: Comments corrected
+package SPI_Interface is
 
    subtype SPI_Devices is unsigned_char range 0 .. 1;
    subtype SPI_Modes is unsigned_char range 0 .. 3;
@@ -67,7 +70,7 @@ package spi_interface is
   -- 0: Success;
   -- Non zero values are the error code returned from call to close
   
-end spi_interface;
+end SPI_Interface;
 
 pragma Style_Checks (On);
 pragma Warnings (On, "-gnatwu");

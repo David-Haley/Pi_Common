@@ -1,5 +1,5 @@
 # Pi_Common
-This repository contains a number of Ada packages that allow basic access to the RPi GPIO I2C and SPI.
+This repository contains a number of Ada packages that allow basic access to the RPi GPIO, I2C, SPI, and other functionality.
 
 ## RPI_GPIO Package
 Allows basic operations on the the Raspberry Pi GPIO pins as both parallel input and output. Previoulsy used file system IO which is deprecated, now uses libgpiod. When using gprbuild a seperate project file is required for this library, see libgpiod.gpr and build_all.gpr. In build_all.gpr note the "with" clause and the linker -lgpiod.
@@ -36,9 +36,10 @@ The back light can be turned on, off and have its brightness controlled.
 The cursor can be positioned, be visible or hidden. writing of full lines, single characters or strings is provided.
 
 ## MQTT_Client Package
-Provides a simple MQTT publisher and subscriber. It depends on libmosquitto. The interface is non blocking, the Receive function will return immediately Multiple Brokers and Topics are supported for both Publish and Subscribe.
+Provides a simple MQTT publisher and subscriber. It depends on libmosquitto. The interface is non blocking, multiple Brokers and Topics are supported for both Publish and Subscribe. Both blocking and non blocking Receive functions are provided, with stale data timeouts.
+This package has been tested on RPi 3B+, 4 and 5 running Trixie and should not have any RPi specific code, hence it could be compiled on other linux systems.
 A thin Ada binding to libmosquitto is provided by mqtt_library.ads, mostly automatically generated but some editing has been done to make it more or less self contained.
 
 ## Machine_Properties Package
 
-At present provides the host mame of the machine running the application.
+At present provides the host name of the machine running the application.

@@ -1,16 +1,18 @@
-with Ada.text_IO; use Ada.text_IO;
-with Ada.Calendar; use Ada.Calendar;
-with Ada.Exceptions; use Ada.Exceptions;
-with RPI_GPIO; use RPI_GPIO;
-
 -- Test program for rpi_gpio.adb (Ada) and gpio_driver.c (C language).
 -- Origionaly for file system implementation of rpi_gpio, now uses libgpiod
 
 -- Author    : David Haley
 -- Created   : 2017
--- Last Edit : 03/08/2025
+-- Last Edit : 26/05/2026
+
+--  20260526 : Compiler warnings removed
 -- 20250803: Updated to test Release_Pin, Strobe_High and Strobe_Low
 -- functionality.
+
+with Ada.Text_IO; use Ada.Text_IO;
+with Ada.Calendar; use Ada.Calendar;
+with Ada.Exceptions; use Ada.Exceptions;
+with RPi_GPIO; use RPi_GPIO;
 
 procedure Test_GPIO is
    
@@ -99,7 +101,7 @@ procedure Test_GPIO is
       Update_Interval : constant Duration := 0.5;
       Next_Time : Time;
       Character_Available : Boolean;
-      Current_Character : character;
+      Current_Character : Character;
       Second_Count : Second_Counters := 0;
       Pulse_Polarity : Boolean := False;
       
@@ -153,7 +155,7 @@ procedure Test_GPIO is
    
    function Menu return Character is
    
-   Choice : Character;
+      Choice : Character;
    
    begin -- Menu
       Put_Line ("Counter c");
@@ -166,7 +168,7 @@ procedure Test_GPIO is
       Put_Line ("Release Line z");
       Put_Line ("Exit e");
       Put ("Command: ");
-      get (Choice);
+      Get (Choice);
       return Choice;
    end Menu;
    

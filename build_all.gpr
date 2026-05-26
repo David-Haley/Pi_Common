@@ -18,7 +18,9 @@ project Build_All is
    end Naming;
 
    package Compiler is
-     for Default_Switches ("Ada") use ("-g", "-gnat2022", "-fgnat-encodings=gdb");
+     for Default_Switches ("Ada") use ("-g", "-gnat2022",
+        "-gnatwa", "-gnatVa", "-gnatyk", "-gnaty3", "-gnatya", "-gnatyk",
+        "-gnatyl", "-gnatyn", "-gnatyr", "-gnaty-d");
      for Default_Switches ("C") use ("-ggdb", "-pedantic");
    end Compiler;
 

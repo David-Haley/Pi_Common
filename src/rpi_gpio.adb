@@ -1,19 +1,21 @@
-with Ada.Exceptions; use Ada.Exceptions;
-with GPIO_Driver_h; use GPIO_Driver_h;
-with Interfaces.C; use Interfaces.C;
-with Interfaces.C.Strings; use Interfaces.C.Strings;
-
 -- Allows basic operations on the the Raspberry Pi GPIO pins as both
 -- parallel input and output.
 
 -- Author    : David Haley
 -- Created   : 31/07/2017
--- Last Edit : 19/02/2026
+-- Last Edit : 26/05/2026
+
+--  20260526 : Compiler warnings removed and heading comments relocated
+--  Redundant Finalization removed.
 -- 20260219 : Ported to ues libgpio version 2, Chip_Name changef from
 -- "gpiochip0" to "/dev/gpiochip0"
 -- 20250802 : Ported to use C interface to libgpiod.
 -- 20220508 : Added Initialization and general rewrite.
 -- 20190714 : Finalization is only required if one or more pins have been bound
+
+with GPIO_Driver_h; use GPIO_Driver_h;
+with Interfaces.C; use Interfaces.C;
+with Interfaces.C.Strings; use Interfaces.C.Strings;
 
 package body RPi_GPIO is
 
@@ -29,7 +31,7 @@ package body RPi_GPIO is
    end record;
 
    Pin_Array : array (GPIO_Pins) of GPIO :=
-      (
+      [
          Gen0 => (New_String ("GPIO17"), Invalid_Line, In_Pin, Pin_Low, False),
          Gen1 => (New_String ("GPIO18"), Invalid_Line, In_Pin, Pin_Low, False),
          Gen2 => (New_String ("GPIO27"), Invalid_Line, In_Pin, Pin_Low, False),
@@ -37,7 +39,7 @@ package body RPi_GPIO is
          Gen4 => (New_String ("GPIO23"), Invalid_Line, In_Pin, Pin_Low, False),
          Gen5 => (New_String ("GPIO24"), Invalid_Line, In_Pin, Pin_Low, False),
          Gen6 => (New_String ("GPIO25"), Invalid_Line, In_Pin, Pin_Low, False)
-      );
+      ];
    
    procedure Bind_Pin (Pin : in GPIO_Pins;
                        Pin_Direction : in Pin_Directions) is
@@ -114,9 +116,9 @@ package body RPi_GPIO is
            Pin_State'Img;
       end if; -- Pin_Array (Pin).Pin_Direction /= Out_Pin
       if Pin_State then
-          C_Return := Set_High (Pin_Array (Pin).Line_Number);
+         C_Return := Set_High (Pin_Array (Pin).Line_Number);
       else
-          C_Return := Set_Low (Pin_Array (Pin).Line_Number);
+         C_Return := Set_Low (Pin_Array (Pin).Line_Number);
       end if; -- Pin_State;
       if C_Return = 0 then
          Pin_Array (Pin).Pin_State := Pin_State;
@@ -188,6 +190,10 @@ package body RPi_GPIO is
       end if; -- Controlled_Boolean
    end Finalize;
 
+   pragma Warnings (Off, "-gnatwu");
    Finalisation_Required : Controlled_Booleans;
+   --  Require to cause initialization and Finalization code to run.
+   --  Warning for unreferenced variable supptessed.
+   pragma Warnings (On, "-gnatwu");
    
-end RPI_GPIO;
+end RPi_GPIO;

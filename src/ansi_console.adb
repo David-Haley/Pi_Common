@@ -1,18 +1,20 @@
 -- Modified  : David Haley
 -- Created   : 22/03/2019
--- Last Edit : 04/04/2019
+-- Last Edit : 25/05/2026
+
+--  20260525 : Package name case convention followed. Compiler warnings removed.
 -- 20180404 : Set_BG_Colour added
 -- 20190322 : Ser_FG_Colour added
 
 with Ada.Text_IO, Ada.Characters.Latin_1;
 use Ada.Text_IO, Ada.Characters.Latin_1;
 
-package body ansi_console is
-   EscSquareBracket : constant string :=  ESC & "[";
+package body ANSI_Console is
+   EscSquareBracket : constant String :=  ESC & "[";
 
    package Positive_IO is new Ada.Text_IO.Integer_IO (Positive);
 
-   procedure Set_Cursor (Visible : in Boolean := true) is
+   procedure Set_Cursor (Visible : in Boolean := True) is
 
    begin -- Set_Console
       if Visible then
@@ -73,4 +75,4 @@ package body ansi_console is
       Put (BEL);
    end Bleep;
 
- end ansi_console;
+end ANSI_Console;

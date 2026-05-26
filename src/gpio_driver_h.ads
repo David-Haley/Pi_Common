@@ -6,7 +6,7 @@ pragma Warnings (Off, "-gnatwu");
 with Interfaces.C; use Interfaces.C;
 with Interfaces.C.Strings;
 
-package gpio_driver_h is
+package GPIO_Driver_h is
 
   -- Simple GPIO driver for RPI intended to be callable from Ada. The
   -- driver uses libgpiod.
@@ -84,7 +84,7 @@ package gpio_driver_h is
         External_Name => "Read_Input";
 
   -- Reads one line returns 1 for high 0 for low and -1 on failure.
-end gpio_driver_h;
+end GPIO_Driver_h;
 
 pragma Style_Checks (On);
 pragma Warnings (On, "-gnatwu");

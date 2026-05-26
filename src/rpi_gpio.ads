@@ -1,14 +1,17 @@
-with Ada.Finalization; use Ada.Finalization;
+-- Allows basic operations on the the Raspberry Pi GPIO pins as both
+-- parallel inpit and output.
 
 -- Author    : David Haley
 -- Created   : 02/07/2017
--- Last Edit : 03/08/2025
--- Allows basic operations on the the Raspberry Pi GPIO pins as both
--- parallel inpit and output.
+-- Last Edit : 26/05/2026
+
+--  20260526 : Compiler warnings removed, header comments rearranged.
 -- 20250803 : Release_Pin added.
 -- 20250802 : Ported to use C interface to libgpiod, Strob_High and Strob_Low
 -- added.
 -- 20220607 : Private declarations added.
+
+with Ada.Finalization; use Ada.Finalization;
 
 package RPi_GPIO is
 
@@ -55,7 +58,7 @@ package RPi_GPIO is
    Pin_Bound, Pin_not_Bound, Pin_General_Failure, Pin_Illegal_Operation
       : exception;
 
-   private
+private
 
    type Controlled_Booleans is new Limited_Controlled with
       record
@@ -67,5 +70,6 @@ package RPi_GPIO is
 
    overriding
    procedure Finalize (Controlled_Boolean : in out Controlled_Booleans);
+
 
 end RPi_GPIO;

@@ -2,8 +2,9 @@
 
 --  Author    : David Haley
 --  Created   : 12/03/2026
---  Last_Edit : 27/04/2027
+--  Last_Edit : 24/05/2026
 
+--  20260524 : Connected functions included
 --  20260427 : Updated to MQTT_Client changes
 --  20260424 : Loop back test and the ability to set QoS added.
 
@@ -30,6 +31,7 @@ procedure Test_MQTT_Client is
    --  32 bit number represented in hex 16#...#
    Tx_Buffer : String (1 .. 11);
    Loop_Test_Result : Boolean;
+   Connection_Delay : constant Duration := 0.001;
 
 begin -- Test_MQTT_Client
    Put_Line ("Test MQTT client version 20260427");
@@ -45,19 +47,43 @@ begin -- Test_MQTT_Client
    Put_Line ("The broker " & Argument (1) & " must support topics " &
              Topic_1 & ", " & Topic_2 & " and " & Topic_loop);
    Connect_Tx (Argument (1), Argument (2), Argument (3), Topic_1, Tx_1, QoS);
+   while not Is_Connected_Tx (Tx_1) loop
+      Put_Line ("Waiting for " & Topic_1 & " connection");
+      delay Connection_Delay;
+   end loop; -- not Is_Connected_Tx (Tx_1)
    Put_Line (Topic_1 & " connected for publish");
    Connect_Rx (Argument (1), Argument (2), Argument (3), Topic_1, Rx_1, QoS);
+   while not Is_Connected_Rx (Rx_1) loop
+      Put_Line ("Waiting for " & Topic_1 & " connection");
+      delay Connection_Delay;
+   end loop; -- not Is_Connected_Rx (Rx_1)
    Put_Line (Topic_1 & " connected for subscribe");
    Connect_Tx (Argument (1), Argument (2), Argument (3), Topic_2, Tx_2, QoS);
+   while not Is_Connected_Tx (Tx_2) loop
+      Put_Line ("Waiting for " & Topic_2 & " connection");
+      delay Connection_Delay;
+   end loop; -- not Is_Connected_Tx (Tx_2)
    Put_Line (Topic_2 & " connected for publish");
    Connect_Rx (Argument (1), Argument (2), Argument (3), Topic_2, Rx_2, QoS);
+   while not Is_Connected_Rx (Rx_2) loop
+      Put_Line ("Waiting for " & Topic_2 & " connection");
+      delay Connection_Delay;
+   end loop; -- not Is_Connected_Rx (Rx_2)
    Put_Line (Topic_1 & " connected for subscribe");
    --  For loop back testing QoS is set to two, verify message sent once only!
    Connect_Tx (Argument (1), Argument (2), Argument (3), Topic_Loop, Tx_Loop,
                QoS);
+   while not Is_Connected_Tx (Tx_Loop) loop
+      Put_Line ("Waiting for " & Topic_Loop & " connection");
+      delay Connection_Delay;
+   end loop; -- not Is_Connected_Tx (Tx_Loop)
    Put_Line (Topic_loop & " connected for publish");
    Connect_Rx (Argument (1), Argument (2), Argument (3), Topic_Loop, Rx_Loop,
                QoS);
+   while not Is_Connected_Rx (Rx_Loop) loop
+      Put_Line ("Waiting for " & Topic_Loop & " connection");
+      delay Connection_Delay;
+   end loop; -- not Is_Connected_Rx (Rx_Loop)
    Put_Line (Topic_loop & " connected for subscribe");
    while Run_Test loop
       Put_Line ("A: Send " & Topic_1);
@@ -123,10 +149,6 @@ begin -- Test_MQTT_Client
    Put_Line (Topic_1 & " disconnected for publish");
    Disconnect ( Rx_1);
    Put_Line (Topic_1 & " unsubscribed");
-   Disconnect (Tx_2);
-   Put_Line (Topic_2 & " disconnected for publish");
-   Disconnect (Rx_2);
-   Put_Line (Topic_2 & " unsubscribed");
    Disconnect (Tx_2);
    Put_Line (Topic_2 & " disconnected for publish");
    Disconnect (Rx_2);

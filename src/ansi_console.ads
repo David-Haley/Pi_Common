@@ -1,10 +1,12 @@
 -- Modified  : David Haley
 -- Created   : 22/03/2019
--- Last Edit : 04/04/2019
+-- Last Edit : 25/05/2026
+
+--  20260525 : Package name case convention followed. Compiler warnings removed.
 -- 20180404 : Set_BG_Colour added
 -- 20190322 : Set_FG_Colour added
 
-package ansi_console is
+package ANSI_Console is
 
    ----------------------
    -- TYPE DEFINITIONS --
@@ -36,7 +38,7 @@ package ansi_console is
 
    procedure Goto_XY (X : in X_Pos := X_Pos'First; Y : in Y_Pos := Y_Pos'First);
 
-   procedure Set_Cursor (Visible : in Boolean := true);
+   procedure Set_Cursor (Visible : in Boolean := True);
 
    procedure Set_FG_Colour (Colour : in FG_Colours);
 
@@ -49,4 +51,4 @@ package ansi_console is
 
 
 
-end ansi_console;
+end ANSI_Console;

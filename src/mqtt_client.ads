@@ -2,8 +2,9 @@
 
 --  Author    : David Haley
 --  Created   : 09/03/2026
---  Last_Edit : 27/04/2026
+--  Last_Edit : 24/05/2026
 
+--  20260524 : Is_Connected_Tx and Is_Connected_Rx added.
 --  20260427 : Receive_Blocking added;
 --  20260426 : Receive made non blocking, libmosquitto buffers subscribed
 --  topics so strictly the buffering in this unit was not required, thus
@@ -40,6 +41,12 @@ package MQTT_Client is
    --  Can only be called once, unless there is a previous call to Disconnect.
    --  Returns Handle which nust be used with Send and Disconnect
 
+   function Is_Connected_Tx (Handle : MQTT_Handle)
+                             return Boolean with Volatile_Function;
+   --  Returns true if connected, may be false immediately after Connect_Tx
+   --  called, as this is a non blocking call. Connected should be checked
+   --  before calling Send.
+
    procedure Send (Handle : MQTT_Handle;
                    Message : MQTT_Data);
    --  Sends a String. 
@@ -54,6 +61,12 @@ package MQTT_Client is
    --  Connects to broker and subcribes to Topic.
    --  Can only be called once, unless there is a previous call to Disconnect.
    --  Returns Handle which nust be used with Receive and Disconnect
+
+   function Is_Connected_Rx (Handle : MQTT_Handle)
+                             return Boolean with Volatile_Function;
+   --  Returns true if connected, may be false immediately after Connect_Rx
+   --  called, as this is a non blocking call. Connected should be checked
+   --  before calling Receive or Receive_Blocking.
 
    function Receive (Handle : MQTT_Handle;
                      Timeout : Timeouts := Time_Span_Last) return String;

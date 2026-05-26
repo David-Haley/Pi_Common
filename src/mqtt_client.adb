@@ -2,8 +2,10 @@
 
 --  Author    : David Haley
 --  Created   : 09/03/2026
---  Last_Edit : 24/05/2026
+--  Last_Edit : 26/05/2026
 
+--  20260526 : Initialize code corrected.
+--  20260524 : Is_Connected_Tx and Is_Connected_Rx added.
 --  20260526 : Removal of various compiler warnings.
 --  20260426 : Receive made non blocking, libmosquitto buffers subscribed
 --  topics so strictly the buffering in this unit was not required, thus
@@ -319,6 +321,14 @@ package body MQTT_Client is
       end if; -- Return_Code /=  MOSQ_ERR_SUCCESS
    end Connect_Tx;
 
+   function Is_Connected_Tx (Handle : MQTT_Handle) return Boolean is
+
+      --  Returns true if connected, may be false immediately after Connect_Tx
+      --  called, as this is a non blocking call. Connected should be checked
+      --  before calling Send.
+
+      (Store.Is_Valid (Handle, Publish));
+
    procedure Send (Handle : MQTT_Handle;
                    Message : MQTT_Data) is
 
@@ -400,6 +410,14 @@ package body MQTT_Client is
            Return_Code'Img;
       end if; -- Return_Code /= MOSQ_ERR_SUCCESS
    end Connect_Rx;
+
+   function Is_Connected_Rx (Handle : MQTT_Handle) return Boolean is
+
+      --  Returns true if connected, may be false immediately after Connect_Rx
+      --  called, as this is a non blocking call. Connected should be checked
+      --  before calling Receive or Receive_Blocking.
+
+      (Store.Is_Valid (Handle, Subscribe));
 
    function Receive (Handle : MQTT_Handle;
                      Timeout : Timeouts := Time_Span_Last) return String is
@@ -530,8 +548,9 @@ package body MQTT_Client is
       --  conformance with libary call back.
 
    pragma Warnings (On, "-gnatwf");
-
+   
       Handle_Pointer : constant Handle_Pointers := To_Pointer (Obj);
+   --  Warning with respect to unreferenced variable suppresed.
 
    begin -- On_Message
       if Message.payloadlen > 0 then
@@ -557,33 +576,29 @@ package body MQTT_Client is
 
    procedure Initialize (Controlled_Boolean : in out Controlled_Booleans) is
 
+      Return_Code, Version : int;
+      Major, Minor, Revision : aliased int;
+
    begin -- Initialize
+      --  libmosquitto initialisation
+      Return_Code := mosquitto_lib_init;
+      if Return_Code /= MOSQ_ERR_SUCCESS then
+         raise MQTT_Error with "Library initiation failed, code:" &
+           Return_Code'Img;
+      end if; -- Return_Code /= mosquitto_h.MOSQ_ERR_SUCCESS
+      Version := mosquitto_lib_version (Major'Access, Minor'Access,
+                                        Revision'Access);
+      if Version < LIBMOSQUITTO_VERSION_NUMBER then
+         raise MQTT_Error with "Old library, version:" & Major'Img & Minor'Img &
+           Revision'Img;
+      end if; -- Version < LIBMOSQUITTO_VERSION_NUMBER
       Controlled_Boolean.State := True;
    end Initialize;
 
-   --  Data structures associated with library initialisation only.
-
-   Return_Code, Version : int;
-   Major, Minor, Revision : aliased int;
+   pragma Warnings (Off, "-gnatwu");
    Library_Initialised : Controlled_Booleans;
+   --  Required to ensure Initialize and Finalize called
+   --  Warning with respect to unreferenced variable suppresed.
+   pragma Warnings (On, "-gnatwu");
 
-begin -- MQTT_Client
-   --  libmosquitto initialisation
-   Return_Code := mosquitto_lib_init;
-   if Return_Code /= MOSQ_ERR_SUCCESS then
-      raise MQTT_Error with "Library initiation failed, code:" &
-        Return_Code'Img;
-   end if; -- Return_Code /= mosquitto_h.MOSQ_ERR_SUCCESS
-   Version := mosquitto_lib_version (Major'Access, Minor'Access,
-                                     Revision'Access);
-   if Version < LIBMOSQUITTO_VERSION_NUMBER then
-      raise MQTT_Error with "Old library, version:" & Major'Img & Minor'Img &
-        Revision'Img;
-   end if; -- Version < LIBMOSQUITTO_VERSION_NUMBER
-
-   pragma Warnings (Off, "-gnatwm" );
-      Initialize (Library_Initialised);
-   --  Variable used to ensure single shot finalisation, it is set here and
-   --  unset by Finalize.
-   pragma Warnings (On, "-gnatwm" );  
 end MQTT_Client;

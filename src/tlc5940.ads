@@ -18,8 +18,9 @@
 
 -- Author    : David Haley
 -- Created   : 07/08/2017
--- Last Edit : 24/03/2026
+-- Last Edit : 26/03/2026
 
+--  20260526 : Compiler warnings removed.
 --  20260324 : Provision for the display of the Latin_1 Characters
 -- 20220609 : Converted to use SPI_Interface directly called C.
 -- 20220118 : Implementation of protection on display state, potentially makes
@@ -41,7 +42,7 @@
 
 with Ada.Finalization; use Ada.Finalization;
 with RPi_GPIO; use RPi_GPIO;
-with TLC5940_Driver_Types; Use TLC5940_Driver_Types;
+with TLC5940_Driver_Types; use TLC5940_Driver_Types;
 with SPI_Interface; use SPI_Interface;
 
 generic
@@ -67,7 +68,7 @@ package TLC5940 is
 
    procedure Set_Greyscale (Chip : in Chips;
                             LED_Channel : in LED_Channels;
-                            Greyscale : in GreyScales);
+                            Greyscale : in Greyscales);
    -- Sets the greyscale value for a single LED channel
 
    function Get_Greyscale (Chip : in Chips;
@@ -119,7 +120,7 @@ package TLC5940 is
 
    subtype Hex_Digits is Natural range 0 .. 16#0F#;
 
-   Uninitialised_Digit : Exception;
+   Uninitialised_Digit : exception;
    -- Exception raised if Set_Character, Get_Digit or Get_Decimal is called for
    -- a Display which has not been initialised by a call to Initialise_Digit;
 
@@ -131,7 +132,7 @@ package TLC5940 is
 
    procedure Set_Character (Display : in Display_7;
                             Char : in Character;
-                            Greyscale : in GreyScales := Greyscales'Last;
+                            Greyscale : in Greyscales := Greyscales'Last;
                             Decimal_Lit : in Boolean := False);
 
    function Get_Character (Display : in Display_7) return Character;
@@ -140,7 +141,7 @@ package TLC5940 is
 
    SPI_Error : exception;
 
-   private
+private
 
    type SPI_States is new Limited_Controlled with record
       Enabled : Boolean := False;
