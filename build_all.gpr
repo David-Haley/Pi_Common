@@ -1,4 +1,4 @@
-with "libgpiod.gpr";
+with "lib_gpiod.gpr";
 with "lib_mosquitto.gpr";
 
 project Build_All is
