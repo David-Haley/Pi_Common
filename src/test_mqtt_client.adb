@@ -2,13 +2,14 @@
 
 --  Author    : David Haley
 --  Created   : 12/03/2026
---  Last_Edit : 24/05/2026
+--  Last_Edit : 15/06/2026
 
 --  20260524 : Connected functions included
 --  20260427 : Updated to MQTT_Client changes
 --  20260424 : Loop back test and the ability to set QoS added.
 
-with Ada.Numerics.Generic_Complex_Types;
+--  20250615 : Removal of some compiler warnings.
+
 with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Command_Line; use Ada.Command_Line;
 with Ada.Real_Time; use Ada.Real_Time;
@@ -45,7 +46,7 @@ begin -- Test_MQTT_Client
       QoS := 0;
    end if; -- Argument_Count = 4
    Put_Line ("The broker " & Argument (1) & " must support topics " &
-             Topic_1 & ", " & Topic_2 & " and " & Topic_loop);
+             Topic_1 & ", " & Topic_2 & " and " & Topic_Loop);
    Connect_Tx (Argument (1), Argument (2), Argument (3), Topic_1, Tx_1, QoS);
    while not Is_Connected_Tx (Tx_1) loop
       Put_Line ("Waiting for " & Topic_1 & " connection");
@@ -77,14 +78,14 @@ begin -- Test_MQTT_Client
       Put_Line ("Waiting for " & Topic_Loop & " connection");
       delay Connection_Delay;
    end loop; -- not Is_Connected_Tx (Tx_Loop)
-   Put_Line (Topic_loop & " connected for publish");
+   Put_Line (Topic_Loop & " connected for publish");
    Connect_Rx (Argument (1), Argument (2), Argument (3), Topic_Loop, Rx_Loop,
                QoS);
    while not Is_Connected_Rx (Rx_Loop) loop
       Put_Line ("Waiting for " & Topic_Loop & " connection");
       delay Connection_Delay;
    end loop; -- not Is_Connected_Rx (Rx_Loop)
-   Put_Line (Topic_loop & " connected for subscribe");
+   Put_Line (Topic_Loop & " connected for subscribe");
    while Run_Test loop
       Put_Line ("A: Send " & Topic_1);
       Put_Line ("B: Receive " & Topic_1);
@@ -119,7 +120,7 @@ begin -- Test_MQTT_Client
                Positive_IO.Put (Tx_Buffer, Loop_Count, 16);
                Send (Tx_Loop, Tx_Buffer);
                declare -- Receive_String declation block
-                  Receive_String : String :=
+                  Receive_String : constant String :=
                     Receive_Blocking (Rx_Loop, Seconds (2), Seconds (1));
                begin -- Receive_String declation block
                   if Receive_String'Length = 0 then

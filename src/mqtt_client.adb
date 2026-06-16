@@ -12,7 +12,7 @@
 --  eliminating the need of an additional thread per subscribed topic.
 --  20260424 : Follow official Mosquitto example
 --  20260423 : Removed potential memory leak in Send, Data_Pointer is now
---  Explicetly feeed.
+--  Explicetly feed.
 --  20260422 : Changes to remove compiler warnings, largely style.
 --  Functional changes for more correct pointer and address conversions.
 --  20260317: Redundant with for clause MQTT removed
@@ -32,16 +32,6 @@ package body MQTT_Client is
    --  Package private data structures
 
    Default_Port : constant int := 1883;
-
-   package Data_Conversions is new
-     System.Address_To_Access_Conversions (MQTT_Data);
-   use Data_Conversions;
-
-   --  The to_Pointer conversion causes a compiler warning becuse MQTT_Data is
-   --  an unconstrained array. To_Pointer instantiated here is not used;
-
-   subtype Data_Pointers is Data_Conversions.Object_Pointer;
-   procedure Free is new Ada.Unchecked_Deallocation (MQTT_Data, Data_Pointers);
 
    package Handle_Conversions is new
      System.Address_To_Access_Conversions (MQTT_Handle);
@@ -180,7 +170,7 @@ package body MQTT_Client is
          Connection.Mosq :=
            mosquitto_new (Client_Id_Pointer,
                           True,
-                          To_Address (Connection.Handle_Pointer));
+                          Connection.Handle_Pointer.all'Address);
          if Connection.Mosq = null then
             raise MQTT_Error with "failed to create mosquitto";
          end if; -- Connection.Mosq = null
@@ -237,7 +227,7 @@ package body MQTT_Client is
       
       function Get_Handle_Address (Handle : MQTT_Handle) return System.Address
         is
-        (To_Address (Connection_Store (Handle).Handle_Pointer));
+         (Connection_Store (Handle).Handle_Pointer.all'Address);
 
 
       function Get_Topic (Handle : MQTT_Handle) return String is
@@ -335,7 +325,6 @@ package body MQTT_Client is
       --  Sends a String.
 
       Return_Code : int;
-      Data_Pointer : Data_Pointers := new MQTT_Data'(Message);
       Topic_Pointer : chars_ptr;
 
    begin -- Send
@@ -347,11 +336,10 @@ package body MQTT_Client is
                                         null,
                                         Topic_Pointer,
                                         Message'Length,
-                                        To_Address (Data_Pointer),
+                                        Message'Address,
                                         Store.Get_Qos (Handle),
                                         False);
       Free (Topic_Pointer);
-      Free (Data_Pointer);
       if Return_Code /=  MOSQ_ERR_SUCCESS then
          raise MQTT_Error with "Send failed, code:" & Return_Code'Img;
       end if; -- Return_Code /=  MOSQ_ERR_SUCCESS

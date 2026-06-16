@@ -2,7 +2,9 @@
 -- calls to open, close, read write, and ioctl to be made.
 -- Author    : David Haley
 -- Created   : 03/03/2023
--- Last Edit : 03/03/2023 
+-- Last Edit : 15/06/2026
+
+--  20260615 : Some compiler warnings removed.
 
 with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Assertions; use Ada.Assertions;
@@ -16,8 +18,8 @@ procedure Test_I2C is
    type Buffers is array (Buffer_Indices) of aliased unsigned_char;
 
    Return_Value : int;
-   Buffer : Buffers := (others => 0);
-   Buffer_Ptr : constant access Unsigned_char :=
+   Buffer : Buffers := [others => 0];
+   Buffer_Ptr : constant access unsigned_char :=
      Buffer (Buffer_Indices'First)'Access;
    
 begin -- Test_I2C
@@ -29,10 +31,12 @@ begin -- Test_I2C
               Return_Value'Img);
       Return_Value := I2C_Write (Buffer_Ptr, 1);
       if Return_Value = 1 then
-         Put_line (A'Image & " IC found");
+         Put_Line (A'Image & " IC found");
       else
-         Put_line (A'Image & " No IC");
+         Put_Line (A'Image & " No IC");
       end if; -- Return_Value = 1
    end loop; -- A in IC_Addresses
-   Return_Value := I2C_Close;
+   pragma Warnings (Off, "-gnatwm");
+   Return_Value := I2C_Close; -- useless assignment warning suppressed
+   pragma Warnings (On, "-gnatwm");
 end Test_I2C;

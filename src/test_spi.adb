@@ -2,7 +2,9 @@
 -- calls to ioctl to be made.
 -- Author    : David Haley
 -- Created   : 30/04/2022
--- Last Edit : 02/05/2022
+-- Last Edit : 15/06/2026
+
+--  20260615 : Some compiler warnings removed;
 -- 20220501: Shifting values as opposed to random values.
 -- 20220502: Values start at 0 
 
@@ -19,7 +21,7 @@ procedure Test_SPI is
    type Buffers is array (Buffer_Indices) of aliased Unsigned_8;
    TX_Buffer, RX_Buffer : Buffers;
    TX_Buffer_Ptr : constant access Unsigned_8 := TX_Buffer (0)'Access;
-   Rx_Buffer_Ptr : constant access Unsigned_8 := RX_Buffer (0)'Access;
+   RX_Buffer_Ptr : constant access Unsigned_8 := RX_Buffer (0)'Access;
    Length : constant unsigned_short :=
      unsigned_short (Buffer_Indices'Last + 1);
    Device : SPI_Devices;
@@ -39,7 +41,7 @@ begin -- Test_SPI
          for I in Buffer_Indices loop
             TX_Buffer (I) := Unsigned_8'Mod (T + I);
          end loop; -- I in Buffer_Indices
-         Return_Value := SPI_Transfer (Tx_Buffer_Ptr, Rx_Buffer_Ptr, Length);
+         Return_Value := SPI_Transfer (TX_Buffer_Ptr, RX_Buffer_Ptr, Length);
          Assert (Return_Value = 0, "Transfer failed:" & Return_Value'Img);
          if TX_Buffer = RX_Buffer then
             Pass := Pass + 1;
@@ -47,7 +49,7 @@ begin -- Test_SPI
             Fail := Fail + 1;
          end if; -- TX_Buffer = RX_Buffer
       end loop; -- T in Positive range 1 .. 1000
-      Put_line ("Pass count:" & Pass'Img & " Fail count:" & Fail'Img);
+      Put_Line ("Pass count:" & Pass'Img & " Fail count:" & Fail'Img);
       Return_Value := SPI_Close;
       Assert (Return_Value = 0, "Close failed:" & Return_Value'Img);
    else

@@ -3,8 +3,9 @@
 
 -- Author    : David Haley
 -- Created   : 16/08/2017
--- Last Edit : 09/06/2022
+-- Last Edit : 15/06/2026
 
+--  20260615 : Removal of some compiler warnings
 -- 20220609 : Driver_Types renamed to TLC5940_Driver_Types;
 -- 20220119 : End_Ambient_Light no longer required.
 -- 20190716 : Comparitor pin is now non default Gen3 to match test hardware.
@@ -17,9 +18,9 @@
 with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Calendar; use Ada.Calendar;
 with Interfaces; use Interfaces;
-with ANSI_console; use ANSI_console;
+with ANSI_Console; use ANSI_Console;
 with RPi_GPIO; use RPi_GPIO;
-with TLC5940_Driver_Types; Use TLC5940_Driver_Types;
+with TLC5940_Driver_Types; use TLC5940_Driver_Types;
 with TLC5940;
 
 procedure Test_TLC5940 is
@@ -30,11 +31,11 @@ procedure Test_TLC5940 is
    Menu_Column_2 : constant X_Pos := 39;
 
    package Test_LEDs is new TLC5940 (Test_Device, Test_Display);
-   use Test_LEDS;
+   use Test_LEDs;
    Last_LED : constant LED_Channels := 7;
    -- Last discrete LED excludes seven segment display
 
-   Display_Segment : constant Segment_Arrays := (8, 9, 10, 11, 12, 13, 14, 15);
+   Display_Segment : constant Segment_Arrays := [8, 9, 10, 11, 12, 13, 14, 15];
 
    package Correction_IO is new Modular_IO (Corrections);
    package Greyscale_IO is new Modular_IO (Greyscales);
@@ -61,18 +62,18 @@ procedure Test_TLC5940 is
          Goto_XY (0, Y_Offset + 1);
          Put ("GS:");
          for LED_Chanel in LED_Channels loop
-            Greyscale_IO.put (Get_Greyscale (Chip, LED_Chanel), 5);
+            Greyscale_IO.Put (Get_Greyscale (Chip, LED_Chanel), 5);
          end loop; -- for LED_Chanel in LED_Channels
          Goto_XY (0, Y_Offset + 2);
          Put ("DC:");
          for LED_Chanel in LED_Channels loop
-            Correction_IO.put (Get_Correction (Chip, LED_Chanel), 5);
+            Correction_IO.Put (Get_Correction (Chip, LED_Chanel), 5);
          end loop; -- for LED_Chanel in LED_Channels
          Y_Offset := Y_Offset + 3;
       end loop; -- Chip in Test Device
       Goto_XY (0, Y_Offset);
       Put ("Ambient Light:");
-      Greyscale_IO.put (Get_Ambient_Light, 5);
+      Greyscale_IO.Put (Get_Ambient_Light, 5);
    end Display_Driver_State;
 
    procedure Full_Correction is
@@ -93,7 +94,7 @@ procedure Test_TLC5940 is
             end loop; -- for LED_Chanel in LED_Channels
          end loop; -- Chip in Test Device
          Write_Corrections;
-         Delay 1.0;
+         delay 1.0;
       end if; -- Setting_Required
    end Full_Correction;
 
@@ -115,11 +116,11 @@ procedure Test_TLC5940 is
             end loop; -- for LED_Chanel in LED_Channels
          end loop; -- Chip in Test Device
          Write_Corrections;
-         Delay 1.0;
+         delay 1.0;
       end if; -- Setting_Required
    end  Zero_Corrections;
 
-   procedure All_Corrections (Correction : in Corrections) IS
+   procedure All_Corrections (Correction : in Corrections) is
 
    begin --  All_Corrections
       for Chip in Test_Device loop
@@ -180,7 +181,8 @@ procedure Test_TLC5940 is
                   Auto_Brightness := Minimum_Brightness;
                end if; -- Auto_Brightness < Minimum_Brightness
                declare
-                  Digit_String : String := Natural'Image (Seconds_Count / 8);
+                  Digit_String : constant String :=
+                    Natural'Image (Seconds_Count / 8);
                begin
                   Set_Character (Digit_One, Digit_String (2), Auto_Brightness);
                end;
@@ -266,7 +268,7 @@ begin -- Test_TLC5940
             end loop; -- for LED_Chanel in LED_Channels range ...
             Set_Character (Digit_One, '8', Greyscales'First, True);
             Write_LEDs;
-            Delay 1.0;
+            delay 1.0;
             for Brightness in Greyscales loop
                for LED_Chanel in LED_Channels range
                  LED_Channels'First .. Last_LED loop
@@ -274,7 +276,7 @@ begin -- Test_TLC5940
                end loop; -- for LED_Chanel in LED_Channels range ...
                Set_Character (Digit_One, '8', Brightness, True);
                Write_LEDs;
-               Delay 0.01;
+               delay 0.01;
             end loop; -- Brighness in Greyscales
          when '6' =>
             -- step with tail
@@ -283,7 +285,7 @@ begin -- Test_TLC5940
                subtype Brighness_Indices is Natural range
                  LED_Channels'First .. Last_LED + 12;
                Brightness_Array : array (Brighness_Indices) of Greyscales :=
-                 (Greyscales'Last, others => Greyscales'First);
+                 [Greyscales'Last, others => Greyscales'First];
             begin -- test-- test 6
                for LED_Chanel in LED_Channels range
                  LED_Channels'First .. Last_LED loop
@@ -291,8 +293,8 @@ begin -- Test_TLC5940
                end loop; -- for LED_Chanel in LED_Channels range ...
                Set_Character (Digit_One, '8', Greyscales'First, True);
                Write_LEDs;
-               Delay 1.0;
-               For Brightness_Index in Brighness_Indices loop
+               delay 1.0;
+               for Brightness_Index in Brighness_Indices loop
                   for Tail_index in reverse Brighness_Indices range
                     Brighness_Indices'First .. Brightness_Index - 1 loop
                      Brightness_Array (Tail_index) :=
@@ -304,7 +306,7 @@ begin -- Test_TLC5940
                                     Brightness_Array (LED_Index));
                   end loop; -- LED_Index in LED_Channels range ...
                   Write_LEDs;
-                  Delay 1.0;
+                  delay 1.0;
                   if Brightness_Index < Brighness_Indices'Last then
                      Brightness_Array (Brightness_Index + 1) :=
                        Brightness_Array (Brightness_Index);
@@ -319,7 +321,7 @@ begin -- Test_TLC5940
                Set_Greyscale (LEDs, LED_Chanel, Greyscales'First);
             end loop; -- for LED_Chanel in LED_Channels range ...
             for DP in Boolean loop
-               For Number in Hex_Digits loop
+               for Number in Hex_Digits loop
                   case Number is
                      when 0 => 
                         Set_Character (Digit_One, '0', Decimal_Lit => DP);
@@ -379,7 +381,7 @@ begin -- Test_TLC5940
                   end loop; -- LED_Chanel in LED_Channels
                end loop; -- Chip in Test_Device
                Write_Corrections;
-               Delay 0.48;
+               delay 0.48;
             end loop; -- Brighness in Greyscales
          when 'b' | 'B' =>
             Full_Correction;

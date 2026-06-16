@@ -1,10 +1,12 @@
 -- Author    : David Haley
 -- Created   : 22/03/2019
--- Last Edit : 04/04/2019
+-- Last Edit : 15/06/2026
+
+--  20260615 : Some compiler warnings removed.
 -- 20190404 : Rewrite for both foreground and background colours
 
 with Ada.Text_IO; use Ada.Text_IO;
-with ansi_console; use ansi_console;
+with ANSI_Console; use ANSI_Console;
 
 procedure Test_ANSI is
 
