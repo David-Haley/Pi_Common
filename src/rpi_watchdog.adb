@@ -1,8 +1,11 @@
--- Author    : David Haley
--- Created   : 18/09/2017
--- Last Edit : 19/09/2017
 -- Watchdog interface based on hot water controller requirements. made generic
 -- to allow other GPIO pins to be used.
+
+-- Author    : David Haley
+-- Created   : 18/09/2017
+-- Last Edit : 18/09/2026
+
+--  20260618: Compiler warnings removed.
 
 package body RPi_Watchdog is
 
@@ -25,9 +28,9 @@ package body RPi_Watchdog is
       -- Must be called regulary and alternately with Kick_Watchdog_Low to prevent
       -- watchdog "biting".
 
-   begin -- Kick_watchdog_High
+   begin -- Kick_Watchdog_High
       Write_Pin (Pin_High, Kick_Watchdog_Pin);
-   end Kick_watchdog_High;
+   end Kick_Watchdog_High;
 
    procedure Kick_Watchdog_Low is
       -- Must be called regulary and alternately with Kick_Watchdog_Low to prevent
@@ -35,7 +38,7 @@ package body RPi_Watchdog is
 
    begin -- Kick_watchdog_Low
       Write_Pin (Pin_Low, Kick_Watchdog_Pin);
-   end Kick_watchdog_Low;
+   end Kick_Watchdog_Low;
 
 begin -- RPi_Watchdog
       Bind_Pin (Kick_Watchdog_Pin, Out_Pin);

@@ -2,9 +2,14 @@
 -- provides a function for reading both channels of the A/D.
 -- Author    : David Haley
 -- Created   : 22/09/2017
--- Last Edit : 07/05/2017
+-- Last Edit : 18/06/2026
+
+--  20260618 : Compiler warnings removed
 -- 20220507: Converted to use SPI_Interface.ads, implemented in C and callable
 -- from Ada.
+
+with Interfaces; use Interfaces;
+with Interfaces.C; use Interfaces.C;
 
 package body AD7091R2 is
 
@@ -28,13 +33,13 @@ package body AD7091R2 is
       type Buffers is array (Buffer_Indices) of aliased Unsigned_8;
       TX_Buffer, RX_Buffer : Buffers;
       TX_Buffer_Ptr : constant access Unsigned_8 := TX_Buffer (MSB)'Access;
-      Rx_Buffer_Ptr : constant access Unsigned_8 := RX_Buffer (MSB)'Access;
+      RX_Buffer_Ptr : constant access Unsigned_8 := RX_Buffer (MSB)'Access;
       C_Return : int;
 
    begin -- AD_Transfer
       TX_Buffer (MSB) :=
-        unsigned_8 (Byte_Mask and Shift_Right (Data, Byte_Shift));
-      TX_Buffer (LSB) := unsigned_8 (Byte_Mask and Data);
+        Unsigned_8 (Byte_Mask and Shift_Right (Data, Byte_Shift));
+      TX_Buffer (LSB) := Unsigned_8 (Byte_Mask and Data);
       C_Return := SPI_Transfer (TX_Buffer_Ptr, RX_Buffer_Ptr,
                                 unsigned_short (LSB - MSB + 1));
       if C_Return /= 0 then
@@ -53,7 +58,7 @@ package body AD7091R2 is
       Channel_Shift : constant Natural := 13;
       Channel : A_Channels;
       A_Volt : A_Volt_Arrays;
-      Channels_Read : array (A_Channels) of Boolean := (others => False);
+      Channels_Read : array (A_Channels) of Boolean := [others => False];
       All_Channels_Read : Boolean := False;
       RX_Word : Unsigned_16;
 
@@ -122,7 +127,10 @@ package body AD7091R2 is
       SPI_State.Enabled := False;
    end Finalize;
 
+   pragma Warnings (Off, "-gnatwu");
+   -- Suppress warning relating to unreferenced SPI_State
    SPI_State : SPI_States;
    -- Initialize will be called by the creation of SPI_State.
+   pragma Warnings (Off, "-gnatwu");
 
 end AD7091R2;

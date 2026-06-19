@@ -2,13 +2,13 @@
 -- provides a function for reading both channels of the A/D.
 -- Author    : David Haley
 -- Created   : 22/09/2017
--- Last Edit : 06/05/2022
+-- Last Edit : 18/06/2026
+
+--  20260618: Compiler warnings removed.
 -- 20220506: Converted to use SPI_Interface.ads, implemented in C and callable
 -- from Ada.
 
 with Ada.Finalization; use Ada.Finalization;
-with Interfaces; use Interfaces;
-with Interfaces.C; use Interfaces.C;
 with RPi_GPIO; use RPi_GPIO;
 with SPI_Interface; use SPI_Interface;
 
@@ -29,7 +29,7 @@ package AD7091R2 is
    function AD_Read return A_Volt_Arrays;
    -- reads both channels of the A/D
 
-   private
+private
 
    type SPI_States is new Limited_Controlled with record
       Enabled : Boolean := False;
