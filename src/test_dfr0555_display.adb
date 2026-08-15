@@ -1,9 +1,10 @@
--- test program for DFRobot 0555 (2 x 16) display.
--- Author:    David Haley
--- Created:   07/03/2023
--- Last Edit: 08/10/2025
+--  Test program for DFRobot 0555 (2 x 16) display.
+--  Author:    David Haley
+--  Created:   07/03/2023
+--  Last Edit: 15/08/2026
 
--- 20251008 : Spelling corections and tidy up.
+--  20260815 : Get_Immediate used to read in commands.
+--  20251008 : Spelling corections and tidy up.
 
 with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Characters.Handling; use Ada.Characters.Handling;
@@ -69,7 +70,7 @@ procedure Test_DFR0555_Display is
    end Put_String;
 
 begin -- Test_DFR0555_Display
-   Put_Line ("Test_DFR0555_Display version 20251008");
+   Put_Line ("Test_DFR0555_Display version 20260816");
    DFR0555_Display.Enable_Display;
    loop -- One test
       Put_Line ("A Set Brightness");
@@ -82,7 +83,8 @@ begin -- Test_DFR0555_Display
       Put_Line ("H Put string at cursor position");
       Put_Line ("0 Exit tests");
       Put ("Test: ");
-      Get (Test);
+      Get_Immediate (Test);
+      New_Line;
       exit when Test = '0';
       begin -- Test exception block
          case To_Upper (Test) is

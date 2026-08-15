@@ -1,9 +1,11 @@
--- Package to support DFRobot 0555 (2 x 16) display.
--- Author:    David Haley
--- Created:   04/03/2023
--- Last Edit: 08/10/2023
+--  Package to support DFRobot 0555 (2 x 16) display.
+--  Author:    David Haley
+--  Created:   04/03/2023
+--  Last Edit: 15/10/2023
 
--- 20251008 : Backlight_Brightness added.
+--  20260815 : updated for version 1.1, setting of Group_Brightness removed for
+--  compatobility with SN3139 which does not have similar functionality.
+--  20251008 : Backlight_Brightness added.
 
 with Interfaces; use Interfaces;
 
@@ -20,10 +22,8 @@ package DFR0555_Display is
    procedure Enable_Display;
    -- Opens I2C device and initialise the display
 
-   procedure Set_Brightness (Brightness : Backlight_Brightness;
-                             Group_Brightness : Backlight_Brightness
-                             := Backlight_Brightness'Last);
-   -- Sets brightness of back light LED, must be called before turning on the
+   procedure Set_Brightness (Brightness : Backlight_Brightness);
+   --  Sets brightness of back light LED, must be called before turning on the
    --  backlight.
 
    procedure Backlight_On;

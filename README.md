@@ -29,7 +29,7 @@ Provides basic ANSI terminal cursor positioning and setting of text colour etc.
 This package provides for the interception of the SIGTERM signal and ctrl_c to allow an orderly shutdown of a program when these requests are received. This is useful to allow a program to be run as a systend service.
 
 ## DFR0555_Display Package
-Provides comprehensive control over the DFRobot sixteen character two line display (LCD1602 Module). Based on the PCA9633R2 LED back light driver and API31086L LCD driver.
+Provides comprehensive control over the DFRobot (gravity) sixteen character two line display (LCD1602 Module). Supports LED back light driver ICs PCA9633R2 (version 1.0), SN3193 (version 1.1) and API31086L LCD driver. The driver automatically detects which back light driver exists. During the detection process an error will be reported to standard error, but this can be ignored, no exception is raised, unless neither back light driver is detected. Note the documentation for the SN3193 is dubious as noted in the comments with respect to the shutdown register. Only white back light is supported, there are similar displays with RGB back lights.
 
 The back light can be turned on, off and have its brightness controlled.
 
