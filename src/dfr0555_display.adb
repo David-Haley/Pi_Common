@@ -1,35 +1,64 @@
--- Package to support DFRobot 0555 (2 x 16) display.
--- Author:    David Haley
--- Created:   04/03/2023
--- Last Edit: 15/06/2026
+--  Package to support DFRobot 0555 (2 x 16) display (Versions 1.0 and 1.1).
+--  Author:    David Haley
+--  Created:   04/03/2023
+--  Last Edit: 16/08/2026
 
+--  20260816 : Support for DFR0555 version 1.1 added, LED driver changed from
+--  PCA9633 to SN3193. Provides automativ Identification of the LED driver.
 --  20260615 : Some compiler warnings removed.
--- 20251008 : Backlight_Brighness added.
+--  20251008 : Backlight_Brighness added.
 
 with Interfaces.C; use Interfaces.C;
 with I2C_Interface; use I2C_Interface;
 
 package body DFR0555_Display is
 
-   -- Addresses and values for LED driver NXP PCA9633DP2 IC
-   LED_Driver : constant IC_Addresses := 16#60#;
-   type LED_Control_Bytes is new Unsigned_8;
-   subtype LED_Register_Addresses is LED_Control_Bytes range 0 .. 2#00001100#;
-   LED_Register_Mode_1 : constant LED_Register_Addresses := 2#00000000#;
-   LED_Register_Mode_2 : constant LED_Register_Addresses := 2#00000001#;
-   LED_Register_Brightness_0 : constant LED_Register_Addresses := 2#00000010#;
-   LED_Register_Group_Duty_Cycle : constant LED_Register_Addresses :=
+   type LED_Drivers is (PCA9633, SN3193);
+
+   --  Addresses and values for LED driver NXP PCA9633DP2 IC (version 1.0)
+   type PCA9633_Control_Bytes is new Unsigned_8;
+   subtype PCA9633_Register_Addresses is
+     PCA9633_Control_Bytes range 0 .. 2#00001100#;
+   PCA9633_Driver : constant IC_Addresses := 16#60#;
+   PCA9633_Register_Mode_1 : constant PCA9633_Register_Addresses := 2#00000000#;
+   PCA9633_Register_Mode_2 : constant PCA9633_Register_Addresses := 2#00000001#;
+   PCA9633_Register_Brightness_0 : constant PCA9633_Register_Addresses :=
+     2#00000010#;
+   PCA9633_Register_Group_Duty_Cycle : constant PCA9633_Register_Addresses :=
      2#00000110#;
-   LED_Register_Output_State : constant LED_Register_Addresses := 2#00001000#;
+   PCA9633_Register_Output_State : constant PCA9633_Register_Addresses :=
+     2#00001000#;
    --  Registers 00001001 to 00001100 only affect subaddresses and all call
    --  address not relevant to this application
-   LED_No_Auto_Increment : constant LED_Control_Bytes := 2#00000000#;
-
-   LED_Value_Mode_1 : constant unsigned_char := 2#00000000#;
+   PCA9633_No_Auto_Increment : constant PCA9633_Control_Bytes := 2#00000000#;
+   PCA9633_Value_Mode_1 : constant unsigned_char := 2#00000000#;
    -- Not sleep mode, does not respond to sub addresses or all call
-   LED_Value_Mode_2 : constant unsigned_char := 2#00000000#;
+   PCA9633_Value_Mode_2 : constant unsigned_char := 2#00000000#;
    -- Group dimming, non inverted output, output changes on stop, outputs open
    -- drain and not opuput enable pin, outputs high or high Z.
+
+   --  Addresses and values for LED Driver SN3193I310E IC (version 1.1)
+   subtype SN3193_Register_Addresses is unsigned_char range 0 .. 16#2F#;
+   subtype SN3193_Control_Bytes is unsigned_char;
+   SN3193_Driver : constant IC_Addresses := 16#6B#;
+   SN3193_Shutdown_Register : constant SN3193_Register_Addresses := 16#00#;
+   SN3193_Shutdown_Value : constant SN3193_Control_Bytes := 2#00100000#;
+   --  N.B. The data sheet is at best confusing possibly in error. For the IC to
+   --  do snything useful the LSB must be set to 0. Table 3 notes state that
+   --  SSD "1 Normal operation"! All channels enabled, normal operation.
+   SN3193_Current_Set_Register : constant SN3193_Register_Addresses := 16#03#;
+   SN3193_Current_Value : constant SN3193_Control_Bytes := 2#00010000#;
+   --  D4 .. D2 1xx (100) 17.5 mA
+   SN3193_PWM_Register_1 : constant SN3193_Register_Addresses := 16#04#;
+   SN3193_PWM_Transfer_Register : constant SN3193_Register_Addresses := 16#07#;
+   --  Writing here causes the transfer of all the PWM data and LED control
+   --  register.
+   SN3193_Transfer : constant SN3193_Control_Bytes := 16#00#;
+   --  Uncertain if the value written should be 0 or is an don't care.
+   SN3193_LED_Control_Regieter : constant SN3193_Register_Addresses := 16#1D#;
+   SN3193_LED_1_Enable : constant SN3193_Control_Bytes := 2#00000001#;
+   SN3193_All_Disable : constant SN3193_Control_Bytes := 2#00000000#;
+   --  SN3193_Reset_Register : constant SN3193_Register_Addresses := 16#2F#;
 
    -- Addresses and values for LCD driver AiP31068
    LCD_Driver : constant IC_Addresses := 16#3E#;
@@ -62,6 +91,7 @@ package body DFR0555_Display is
       Is_Visible : Boolean;
    end record; -- Cursor_States
 
+   LED_Driver : LED_Drivers;
    Cursor_State : Cursor_States; 
 
    procedure Send_Command (IC_Address : in IC_Addresses;
@@ -74,16 +104,13 @@ package body DFR0555_Display is
    begin -- Send_Command
       Return_Value := Set_IC_Address (IC_Address);
       if Return_Value /= 0 then
-         if IC_Address = LED_Driver then
+         if IC_Address = PCA9633_Driver or  IC_Address = LCD_Driver then
             raise LED_Error with Caller & ", " & Operation &
-              ", setting IC address";
-         elsif IC_Address = LCD_Driver then
-            raise LCD_Error with Caller & ", " & Operation &
               ", setting IC address";
          else
             raise Program_Error with Caller & ", " & Operation &
-              ", Unknown address";
-         end if; -- IC_Address = LED_Driver
+              ", Unknown IC address";
+         end if; -- IC_Address = PCA9633_Driver
       end if; -- Return_Value /= 0
       Command_Ptr := Command (Command_Indices'First)'Access;
       Return_Value := I2C_Write (Command_Ptr, unsigned_short (Command_Length));
@@ -91,6 +118,41 @@ package body DFR0555_Display is
          raise LED_Error with Caller & ", " & Operation;
       end if; -- Return_Value /= Command_Length
    end Send_Command;
+
+   function Identify_LED_Driver return LED_Drivers is
+
+      --  Identifies which LED driver is used and hence which version module.
+
+      Caller : constant String := "Identify_LED_Driver";
+      Return_Value : int;
+      Dummy : aliased unsigned_char;
+      Found : Boolean := False;
+      Identity : LED_Drivers;
+
+   begin -- Identify_LED_Driver
+         Return_Value := Set_IC_Address (PCA9633_Driver);
+         if Return_Value /= 0 then
+            raise LED_Error with Caller & " Setting PCA9633 address";
+         end if; -- Return_Value /= 0
+         Return_Value := I2C_Write (Dummy'Access, 0);
+         if Return_Value = 0 then
+            Identity := PCA9633;
+            Found := True;
+         end if; -- Return_Value = 0
+         Return_Value := Set_IC_Address (SN3193_Driver);
+         if Return_Value /= 0 then
+            raise LED_Error with Caller & " Setting SN3193 address";
+         end if; -- Return_Value /= 0
+         Return_Value := I2C_Write (Dummy'Access, 0);
+         if Return_Value = 0 then
+            Identity := SN3193;
+            Found := True;
+         end if; -- Return_Value = 0
+         if not Found then
+            raise LED_Error with Caller & " No LED driver found";
+         end if; -- not Found
+      return Identity;
+   end Identify_LED_Driver;
 
    procedure Enable_Display is
 
@@ -105,12 +167,21 @@ package body DFR0555_Display is
       if Return_Value /= 0 then
          raise LED_Error with "Opening I2C device" & I2C_Device'Img;
       end if; -- Return_Value /= 0
-      Command := [unsigned_char (LED_No_Auto_Increment or LED_Register_Mode_1),
-                  LED_Value_Mode_1];
-      Send_Command (LED_Driver, Command, Caller, "Mode_1 register");
-      Command := [unsigned_char (LED_No_Auto_Increment or LED_Register_Mode_2),
-                  LED_Value_Mode_2];
-      Send_Command (LED_Driver, Command, Caller, "Mode_2 register");
+      LED_Driver := Identify_LED_Driver;
+      case LED_Driver is
+      when PCA9633 =>
+         Command :=
+         [unsigned_char (PCA9633_No_Auto_Increment or PCA9633_Register_Mode_1),
+                           PCA9633_Value_Mode_1];
+         Send_Command (PCA9633_Driver, Command, Caller, "Mode_1 register");
+         Command :=
+         [unsigned_char (PCA9633_No_Auto_Increment or PCA9633_Register_Mode_2),
+                           PCA9633_Value_Mode_2];
+         Send_Command (PCA9633_Driver, Command, Caller, "Mode_2 register");
+      when SN3193 =>
+         Command := [SN3193_Shutdown_Register, SN3193_Shutdown_Value];
+         Send_Command (SN3193_Driver, Command, Caller, "Shutdown register");
+      end case; -- LED_Driver
       Command := [unsigned_char (LCD_Instruction_Byte), LCD_Function];
       Send_Command (LCD_Driver, Command, Caller, "LCD_Function");
       Command := [unsigned_char (LCD_Instruction_Byte),
@@ -123,26 +194,35 @@ package body DFR0555_Display is
       Send_Command (LCD_Driver, Command, Caller, "LCD_Entry");
    end Enable_Display;
 
-   procedure Set_Brightness (Brightness : Backlight_Brightness;
-                             Group_Brightness : Backlight_Brightness
-                             := Backlight_Brightness'Last) is
+   procedure Set_Brightness (Brightness : Backlight_Brightness) is
                                 
       -- Sets brightness of back light LED, must be called before turning on the
       -- backlight.
 
       Command : Commands;
+      Caller : constant String :="Set_Brightness";
 
    begin -- Set_Brightness
-      Command := [unsigned_char (LED_No_Auto_Increment or
-                                 LED_Register_Group_Duty_Cycle),
-                  unsigned_char (Group_Brightness)];
-      Send_Command (LED_Driver, Command, "Set_Brightness",
-                    "writing LED_Register_Group_Duty_Cycle");
-      Command := [unsigned_char (LED_No_Auto_Increment or
-                                   LED_Register_Brightness_0),
-                  unsigned_char (Brightness)];
-      Send_Command (LED_Driver, Command, "Set_Brightness",
-                    "writing LED_Register_Brightness_0");
+      case LED_Driver is
+      when PCA9633 =>
+         Command := [unsigned_char (PCA9633_No_Auto_Increment or
+                                    PCA9633_Register_Group_Duty_Cycle),
+                     unsigned_char (Backlight_Brightness'Last)];
+         Send_Command (PCA9633_Driver, Command, Caller,
+                       "Register_Group_Duty_Cycle");
+         Command := [unsigned_char (PCA9633_No_Auto_Increment or
+                                    PCA9633_Register_Brightness_0),
+                     unsigned_char (Brightness)];
+         Send_Command (PCA9633_Driver, Command, Caller,
+                       "Register_Brightness_0");
+      when SN3193 =>
+         Command := [SN3193_Current_Set_Register, SN3193_Current_Value];
+         Send_Command (SN3193_Driver, Command, Caller, "Set current");
+         Command := [SN3193_PWM_Register_1, unsigned_char (Brightness)];
+         Send_Command (SN3193_Driver, Command, Caller, "Set PWM");
+         Command := [SN3193_PWM_Transfer_Register, SN3193_Transfer];
+         Send_Command (SN3193_Driver, Command, Caller, "PWM transfer");
+      end case; -- LED_Driver
    end Set_Brightness;
 
    procedure Backlight_On is
@@ -150,12 +230,22 @@ package body DFR0555_Display is
       -- Turns on the backlight.
 
       Command : Commands;
+      Caller : constant String := "Backlight_On";
 
    begin -- Backlight_On
-      Command := [unsigned_char (LED_No_Auto_Increment or
-                  LED_Register_Output_State), 2#00000011#];
-      Send_Command (LED_Driver, Command, "Backlight_On",
-                    "writing LED_Register_Output_State");
+      case LED_Driver is
+      when PCA9633 =>
+         Command := [unsigned_char (PCA9633_No_Auto_Increment or
+                                    PCA9633_Register_Output_State),
+                     2#00000011#];
+         Send_Command (PCA9633_Driver, Command, Caller,
+                       "Register_Output_State");
+      when SN3193 =>
+         Command := [SN3193_LED_Control_Regieter, SN3193_LED_1_Enable];
+         Send_Command (SN3193_Driver, Command, Caller, "Control_Register");
+         Command := [SN3193_PWM_Transfer_Register, SN3193_Transfer];
+         Send_Command (SN3193_Driver, Command, Caller, "PWM transfer");
+      end case; -- LED_Driver
    end Backlight_On;
 
    procedure Backlight_Off is
@@ -163,12 +253,21 @@ package body DFR0555_Display is
       -- Turns off the backlight.
 
       Command : Commands;
+      Caller : constant String := "Backlight_Off";
 
    begin -- Backlight_Off
-      Command := [unsigned_char (LED_No_Auto_Increment or
-                                 LED_Register_Output_State), 2#00000000#];
-      Send_Command (LED_Driver, Command, "Backlight_Off",
-                    "writing LED_Register_Output_State");
+      case LED_Driver is
+      when PCA9633 =>
+         Command := [unsigned_char (PCA9633_No_Auto_Increment or
+                                    PCA9633_Register_Output_State), 2#00000000#];
+         Send_Command (PCA9633_Driver, Command, Caller,
+                       "Register_Output_State");
+      when SN3193 =>
+         Command := [SN3193_LED_Control_Regieter, SN3193_All_Disable];
+         Send_Command (SN3193_Driver, Command, Caller, "Control_Register");
+         Command := [SN3193_PWM_Transfer_Register, SN3193_Transfer];
+         Send_Command (SN3193_Driver, Command, Caller, "PWM transfer");
+      end case; -- LED_Driver
    end Backlight_Off;
 
    procedure Clear is
