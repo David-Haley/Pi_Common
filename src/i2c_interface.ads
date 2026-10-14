@@ -8,7 +8,8 @@ with Interfaces.C; use Interfaces.C;
   -- raspberry-projects.com/pi/programming-in-c/i2c/using-the-i2c-interface.
   -- Author    : David Haley
   -- Created   : 03/03/2023
-  -- Last Edit : 03/03/2023
+  -- Last Edit : 15/10/2026
+  -- 20261015 : Comments updated, errors are now returned as -errno.
   -- Name changed to I2C_Interface, subtypes I2C_Devices and IC_Addresses added.
 
 package I2C_Interface is
@@ -22,8 +23,9 @@ package I2C_Interface is
         Convention => C, 
         External_Name => "I2C_Open";
 
-  -- I2C_Device 0 .. 1
-  -- Returns 0 if successful, otherwise the error code from open
+  -- Opens /dev/i2c-I2C_Device.
+  -- Returns 0 if successful, -EBUSY if a device is already open, otherwise
+  -- -errno from open.
   
    function Set_IC_Address (IC_Address : IC_Addresses) return int
    with Import => True, 
@@ -32,7 +34,8 @@ package I2C_Interface is
 
   -- Sets the IC_Address to be used for subsequent read and write operations.
   -- only 7 bit addresses are supported address should lie in range 0 .. 7F.
-  -- Returns 0 if successful, otherwise the error code from ioctl
+  -- Returns 0 if successful, otherwise -errno from ioctl, -EBADF if the device
+  -- is not open.
   
    function I2C_Write (Tx_Buffer : access unsigned_char;
                        Length : unsigned_short) return int  -- i2c_driver.h:18
@@ -42,8 +45,8 @@ package I2C_Interface is
 
   -- Tx_Buffer must be at least Length bytes long.
   -- Transfers Length bytes from the Tx_Buffer to the specified IC_Address.
-  -- Return positive values the number of bytes written, negative values are the
-  -- error code returned from the call to write.
+  -- Return positive values the number of bytes written, negative values are
+  -- -errno from write, -EBADF if the device is not open.
   
    function I2C_Read (Rx_Buffer : access unsigned_char;
                       Length : unsigned_short) return int  -- i2c_driver.h:24
@@ -53,17 +56,17 @@ package I2C_Interface is
 
   -- Rx_Buffer must be at least Length bytes long.
   -- Transfers Length bytes into the RxBuffer.
-  -- Return positive values the number of btres read, negative values are the
-  -- error code returned from the call to read.
+  -- Return positive values the number of bytes read, negative values are
+  -- -errno from read, -EBADF if the device is not open.
   
    function I2C_Close return int  -- i2c_driver.h:30
    with Import => True, 
         Convention => C, 
         External_Name => "I2C_Close";
 
-  -- Close  the SPI device should be called before program termination.
+  -- Close the I2C device should be called before program termination.
   -- Return values:
   -- 0: Success;
-  -- Non zero values are the error code returned from the call to close
+  -- Negative values are -errno from close, -EBADF if the device is not open.
   
 end I2C_Interface;
