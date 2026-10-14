@@ -4,8 +4,9 @@
 
 -- Author    : David Haley
 -- Created   : 29/04/2022
--- Last Edit : 11/10/2025
+-- Last Edit : 15/10/2026
 
+-- 20261015: Comments updated, errors are now returned as -errno.
 -- 20260525: Casing of package name and heading comments updated.  
 -- 20251011: Check on word length added
 -- 20220490: Comments corrected
@@ -37,12 +38,12 @@ package SPI_Interface is
   -- Must be called before any transfers, returns 0 if successful.
   -- Return values:
   --  0: Success
-  -- -1: Unknown SPI device
-  -- -2: Error opening SPI device
-  -- -3: Unknown SPI mode requested
-  -- -4: Error setting Mode
-  -- -5: Bad speed requested
-  -- -6: Word length not set correctly
+  -- -EINVAL: SPI_Device, Mode or Speed out of range
+  -- -EBUSY: An SPI device is already open
+  -- -EIO: Mode or word length did not read back as set
+  -- Other negative values are -errno from open or ioctl. The device is closed
+  -- if any part of the configuration fails.
+
    function SPI_Transfer
      (Tx_Buffer : access Unsigned_8;
       Rx_Buffer : access Unsigned_8;
@@ -57,18 +58,20 @@ package SPI_Interface is
   -- back Length bytes into the RxBuffer.
   -- Return values.
   -- 0: Success
-  -- Negative values are the error code returned from call to ioctl with second
-  -- parameter SPI_IOC_MESSAGE(1)
+  -- -EBADF: The SPI device is not open
+  -- Other negative values are -errno from ioctl with second parameter
+  -- SPI_IOC_MESSAGE(1)
   
    function SPI_Close return int  -- spi_driver.h:36
    with Import => True, 
         Convention => C, 
         External_Name => "SPI_Close";
 
-  -- Close  the SPI device should be called before program termination.
+  -- Close the SPI device should be called before program termination.
   -- Return values:
   -- 0: Success;
-  -- Non zero values are the error code returned from call to close
+  -- -EBADF: The SPI device is not open
+  -- Other negative values are -errno from close.
   
 end SPI_Interface;
 

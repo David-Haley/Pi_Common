@@ -17,8 +17,10 @@
 
 -- Author    : David Haley
 -- Created   : 08/08/2017
--- Last Edit : 26/05/2026
+-- Last Edit : 15/10/2026
 
+--  20261015 : Finalize no longer raises an exception. Error messages include
+--  the error reported by the C driver.
 --  20260526 : Compiler warnings removed.
 --  20260329 : Provision for the display of the Latin_1 characters. All 
 --  characters valid, those not capable of display mapped to ' '.
@@ -50,10 +52,16 @@
 -- 20170909 : Task to manage blanking and transfer of LED data
 
 with Ada.Real_Time; use Ada.Real_Time;
+with GNAT.OS_Lib;
 with Interfaces; use Interfaces;
 with Interfaces.C; use Interfaces.C;
 
 package  body TLC5940 is
+
+   function Error_Text (C_Return : in int) return String is
+     (C_Return'Img & " (" &
+      GNAT.OS_Lib.Errno_Message (Err => Integer (-C_Return)) & ')');
+   -- Describes the -errno value returned by the C driver.
 
    subtype GS_Byte_Indices is unsigned_short range 0 .. 23;
    -- Grey Scale shift register buffer 16 * 12 bits
@@ -631,7 +639,7 @@ package  body TLC5940 is
             C_Return := SPI_Transfer (TX_Ptr, RX_Ptr, DC_Byte_Indices'Last + 1);
             if C_Return /= 0 then
                raise SPI_Error with "Failed Write_Corrections, returned:" &
-                 C_Return'Img;
+                 Error_Text (C_Return);
             end if; -- C_Return /= 0
             Buffer_Array (I).DC_RX := Transfer.DC_RX;
          end loop; -- for I in Chips
@@ -667,7 +675,7 @@ package  body TLC5940 is
                                          GS_Byte_Indices'Last + 1);
                if C_Return /= 0 then
                   raise SPI_Error with "Failed Write_LEDs, returned:" &
-                  C_Return'Img;
+                  Error_Text (C_Return);
                end if; -- C_Return /= 0
                Buffer_Array (I).GS_RX := Transfer.GS_RX;
             end loop; -- for I in Chips
@@ -857,7 +865,8 @@ package  body TLC5940 is
       -- Note Is_Blanked is initialised to True to match this
       C_Return := SPI_Open (SPI_State.Device, 0, SPI_State.Speed);
       if C_Return /= 0 then
-         raise SPI_Error with "Failed open, returned:" & C_Return'Img;
+         raise SPI_Error with "Failed open, returned:" &
+           Error_Text (C_Return);
       end if; -- C_Return /= 0
       SPI_State.Enabled := True;
       Write_Corrections;
@@ -865,16 +874,16 @@ package  body TLC5940 is
    end Initialize;
 
    procedure Finalize (SPI_State : in out SPI_States) is
-      -- Closes SPI device when package goes out of scope.
-      
+      -- Closes SPI device when package goes out of scope. An error on close is
+      -- ignored, an exception raised here would only become Program_Error
+      -- during program termination.
+
       C_Return : int;
+      pragma Unreferenced (C_Return);
 
    begin -- Finalize
       if SPI_State.Enabled then
          C_Return := SPI_Close;
-         if C_Return /= 0 then
-            raise SPI_Error with "Failed close, returned:" & C_Return'Img;
-         end if; -- C_Return /= 0
       end if; -- SPI_State.Enabled
       SPI_State.Enabled := False;
    end Finalize;
