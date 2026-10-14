@@ -2,8 +2,10 @@
 -- calls to open, close, read write, and ioctl to be made.
 -- Author    : David Haley
 -- Created   : 03/03/2023
--- Last Edit : 15/06/2026
+-- Last Edit : 15/10/2026
 
+--  20261015 : Probe with a zero length write (quick command) rather than
+--  writing a data byte to every device.
 --  20260615 : Some compiler warnings removed.
 
 with Ada.Text_IO; use Ada.Text_IO;
@@ -29,8 +31,8 @@ begin -- Test_I2C
       Return_Value := Set_IC_Address (A);
       Assert (Return_Value = 0, "I2C_Set_Adddress failed error code:" &
               Return_Value'Img);
-      Return_Value := I2C_Write (Buffer_Ptr, 1);
-      if Return_Value = 1 then
+      Return_Value := I2C_Write (Buffer_Ptr, 0);
+      if Return_Value = 0 then
          Put_Line (A'Image & " IC found");
       else
          Put_Line (A'Image & " No IC");

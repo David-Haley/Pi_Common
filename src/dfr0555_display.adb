@@ -1,13 +1,17 @@
 --  Package to support DFRobot 0555 (2 x 16) display (Versions 1.0 and 1.1).
 --  Author:    David Haley
 --  Created:   04/03/2023
---  Last Edit: 16/08/2026
+--  Last Edit: 15/10/2026
 
+--  20261015 : Exception messages include the I2C error, LCD failures raise
+--  LCD_Error. Put (String) accepts slices and advances the cursor. Delay
+--  added after Clear. Disable_Display always closes the I2C device.
 --  20260816 : Support for DFR0555 version 1.1 added, LED driver changed from
 --  PCA9633 to SN3193. Provides automativ Identification of the LED driver.
 --  20260615 : Some compiler warnings removed.
 --  20251008 : Backlight_Brighness added.
 
+with GNAT.OS_Lib;
 with Interfaces.C; use Interfaces.C;
 with I2C_Interface; use I2C_Interface;
 
@@ -91,31 +95,50 @@ package body DFR0555_Display is
       Is_Visible : Boolean;
    end record; -- Cursor_States
 
-   LED_Driver : LED_Drivers;
-   Cursor_State : Cursor_States; 
+   LED_Driver : LED_Drivers := PCA9633;
+   --  Set by Enable_Display, the default only ensures that LED operations
+   --  called before Enable_Display fail with LED_Error rather than reading an
+   --  invalid value.
+   Cursor_State : Cursor_States;
+
+   function Error_Text (Return_Value : in int) return String is
+     (if Return_Value < 0 then
+         " (" & GNAT.OS_Lib.Errno_Message (Err => Integer (-Return_Value)) &
+         ')'
+      else
+         " (" & Return_Value'Img & " bytes transferred)");
+   -- Describes a failed I2C call, Return_Value is -errno or a short count.
 
    procedure Send_Command (IC_Address : in IC_Addresses;
                            Command : in out Commands;
                            Caller, Operation : in String) is
-                            
+
       Command_Ptr : access unsigned_char;
       Return_Value : int;
+
+      procedure Fail (Step : in String) with No_Return is
+         -- Raises LCD_Error for the LCD driver, otherwise LED_Error.
+
+         Message : constant String := Caller & ", " & Operation & Step &
+           Error_Text (Return_Value);
+
+      begin -- Fail
+         if IC_Address = LCD_Driver then
+            raise LCD_Error with Message;
+         else
+            raise LED_Error with Message;
+         end if; -- IC_Address = LCD_Driver
+      end Fail;
 
    begin -- Send_Command
       Return_Value := Set_IC_Address (IC_Address);
       if Return_Value /= 0 then
-         if IC_Address = PCA9633_Driver or  IC_Address = LCD_Driver then
-            raise LED_Error with Caller & ", " & Operation &
-              ", setting IC address";
-         else
-            raise Program_Error with Caller & ", " & Operation &
-              ", Unknown IC address";
-         end if; -- IC_Address = PCA9633_Driver
+         Fail (", setting IC address");
       end if; -- Return_Value /= 0
       Command_Ptr := Command (Command_Indices'First)'Access;
       Return_Value := I2C_Write (Command_Ptr, unsigned_short (Command_Length));
       if Return_Value /= Command_Length then
-         raise LED_Error with Caller & ", " & Operation;
+         Fail ("");
       end if; -- Return_Value /= Command_Length
    end Send_Command;
 
@@ -132,7 +155,8 @@ package body DFR0555_Display is
    begin -- Identify_LED_Driver
          Return_Value := Set_IC_Address (PCA9633_Driver);
          if Return_Value /= 0 then
-            raise LED_Error with Caller & " Setting PCA9633 address";
+            raise LED_Error with Caller & " Setting PCA9633 address" &
+              Error_Text (Return_Value);
          end if; -- Return_Value /= 0
          Return_Value := I2C_Write (Dummy'Access, 0);
          if Return_Value = 0 then
@@ -141,7 +165,8 @@ package body DFR0555_Display is
          end if; -- Return_Value = 0
          Return_Value := Set_IC_Address (SN3193_Driver);
          if Return_Value /= 0 then
-            raise LED_Error with Caller & " Setting SN3193 address";
+            raise LED_Error with Caller & " Setting SN3193 address" &
+              Error_Text (Return_Value);
          end if; -- Return_Value /= 0
          Return_Value := I2C_Write (Dummy'Access, 0);
          if Return_Value = 0 then
@@ -165,7 +190,8 @@ package body DFR0555_Display is
    begin -- Enable_Display
       Return_Value := I2C_Open (I2C_Device);
       if Return_Value /= 0 then
-         raise LED_Error with "Opening I2C device" & I2C_Device'Img;
+         raise LED_Error with "Opening I2C device" & I2C_Device'Img &
+           Error_Text (Return_Value);
       end if; -- Return_Value /= 0
       LED_Driver := Identify_LED_Driver;
       case LED_Driver is
@@ -274,12 +300,17 @@ package body DFR0555_Display is
 
       -- Clears all display text
 
+      Clear_Time : constant Duration := 0.002;
+      -- Execution time of the clear instruction, the LCD driver ignores
+      -- further instructions until it has completed.
+
       Command : Commands;
-      
+
    begin -- Clear
       Command := [unsigned_char (LCD_Instruction_Byte), LCD_Clear];
       Send_Command
        (LCD_Driver, Command, "Clear", "writing clear instruction");
+      delay Clear_Time;
       Cursor_State.Cursor_Position := LCD_Columns'First;
       Cursor_State.Line := LCD_Lines'First;
    end Clear;
@@ -302,13 +333,15 @@ package body DFR0555_Display is
    begin -- Put_Line
       Return_Value := Set_IC_Address (LCD_Driver);
       if Return_Value /= 0 then
-         raise LED_Error with "Put_Line, setting LCD_Driver address";
+         raise LCD_Error with "Put_Line, setting LCD_Driver address" &
+           Error_Text (Return_Value);
       end if; -- Return_Value /= 0
       Buffer (0) := unsigned_char (LCD_Instruction_Byte);
       Buffer (1) := LCD_Set_DDRam or Display_Ram (LCD_Line);
       Return_Value := I2C_Write (Buffer_Ptr, 2);
       if Return_Value /= 2 then
-         raise LCD_Error with "Put_Line, setting DDRam address";
+         raise LCD_Error with "Put_Line, setting DDRam address" &
+           Error_Text (Return_Value);
       end if; -- Return_Value /= 2
       Buffer (0) := unsigned_char (LCD_Data_Byte);
       for I in Buffer_Indices range 1 .. Buffer_Indices'Last loop
@@ -316,8 +349,12 @@ package body DFR0555_Display is
       end loop; -- I in Buffer_Indices range 1 .. Buffer_Indices'Last
       Return_Value := I2C_Write (Buffer_Ptr, To_Write);
       if Return_Value /= int (To_Write) then
-         raise LCD_Error with "Put_Line, writing Text";
+         raise LCD_Error with "Put_Line, writing Text" &
+           Error_Text (Return_Value);
       end if; -- Return_Value /= int (To_Write)
+      Cursor_State.Cursor_Position := Cursor_Positions'Last;
+      Cursor_State.Line := LCD_Line;
+      -- The LCD driver leaves the cursor after the last character written
    end Put_Line;
 
    procedure Position_Cursor (Column : in LCD_Columns;
@@ -385,16 +422,21 @@ package body DFR0555_Display is
       if Cursor_State.Cursor_Position + Item'Length - 1 <= LCD_Columns'Last then
          Return_Value := Set_IC_Address (LCD_Driver);
          if Return_Value /= 0 then
-            raise LED_Error with "Put, setting LCD_Driver address";
+            raise LCD_Error with "Put, setting LCD_Driver address" &
+              Error_Text (Return_Value);
          end if; -- Return_Value /= 0
          Buffer (0) := unsigned_char (LCD_Data_Byte);
          for I in Buffer_Indices range 1 .. Buffer_Indices'Last loop
-            Buffer (I) := unsigned_char (Character'Pos (Item (I)));
+            Buffer (I) :=
+              unsigned_char (Character'Pos (Item (Item'First + I - 1)));
          end loop; -- I in Buffer_Indices range 1 .. Buffer_Indices'Last
          Return_Value := I2C_Write (Buffer_Ptr, To_Write);
          if Return_Value /= int (To_Write) then
-            raise LCD_Error with "Put, writing Text";
+            raise LCD_Error with "Put, writing Text" &
+              Error_Text (Return_Value);
          end if; -- Return_Value /= int (To_Write)
+         Cursor_State.Cursor_Position :=
+           Cursor_State.Cursor_Position + Item'Length;
       else
          raise LCD_Error with
            "Attempt to write string beyond LCD_Columns'Last";
@@ -408,12 +450,19 @@ package body DFR0555_Display is
       Return_Value : int;
 
    begin -- Disable_Display
-      Backlight_Off;
-      Clear;
+      begin -- Blank display
+         Backlight_Off;
+         Clear;
+      exception
+         when others =>
+            -- Release the I2C device even if the display cannot be blanked
+            Return_Value := I2C_Close;
+            raise;
+      end; -- Blank display
       Return_Value := I2C_Close;
       if Return_Value /= 0 then
          raise LED_Error with
-           " Disable_Display, call to I2C_Close";
+           " Disable_Display, call to I2C_Close" & Error_Text (Return_Value);
       end if; -- Return_Value /= 0
    end Disable_Display;
 
