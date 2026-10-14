@@ -3,8 +3,9 @@
 
 -- Author    : David Haley
 -- Created   : 02/07/2017
--- Last Edit : 26/05/2026
+-- Last Edit : 14/10/2026
 
+--  20261014 : GPIO chip opened on first Bind_Pin rather than at elaboration.
 --  20260526 : Compiler warnings removed, header comments rearranged.
 -- 20250803 : Release_Pin added.
 -- 20250802 : Ported to use C interface to libgpiod, Strob_High and Strob_Low
@@ -64,9 +65,6 @@ private
       record
          State : Boolean := False;
       end record;
-
-   overriding
-   procedure Initialize (Controlled_Boolean : in out Controlled_Booleans);
 
    overriding
    procedure Finalize (Controlled_Boolean : in out Controlled_Booleans);
