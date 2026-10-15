@@ -4,22 +4,23 @@
 -- This is a generic package that can be dimensioned to support a specified
 -- number of cascaded ICs to support N * 16 LEDs. The range allows the package
 -- to be instanciated with an enumerated type giving a symbolic name to each
--- chip. Tne number of devices which may be cascaded is ultimately limited by
+-- chip. The number of devices which may be cascaded is ultimately limited by
 -- practical hardware limits for example fanout on clock signals. The data for
 -- each chip is transferred as a seperate SPI operation with the result that no
 -- more than 24 bytes are transferred in a single operation. Hence there is no
 -- software imposed limit on the number of devices that may be cascaded. The
--- default correction value equates to full brightness amd the default
+-- default correction value equates to full brightness and the default
 -- Greyscale is no output. The package depends on the SPI_Interface and rpi-gpio
 -- packages. Assumes that hardware is active low to blank and active low to
 -- transfer data. Unless otherwise desirable explicit blanking is not required
--- for a gerysacle update the hardware ensures that all updates occur during
+-- for a greyscale update the hardware ensures that all updates occur during
 -- blanking. No support for dot correction EEPROM, DCPRG assumed high
 
 -- Author    : David Haley
 -- Created   : 07/08/2017
--- Last Edit : 26/03/2026
+-- Last Edit : 15/10/2026
 
+--  20261015 : Comment corrections.
 --  20260526 : Compiler warnings removed.
 --  20260324 : Provision for the display of the Latin_1 Characters
 -- 20220609 : Converted to use SPI_Interface directly called C.
@@ -47,7 +48,7 @@ with SPI_Interface; use SPI_Interface;
 
 generic
    type Chips is (<>); -- The range of cascaded TLC5940 devices
-   type Display_7 is (<>); -- Ramge of Seven segment displays
+   type Display_7 is (<>); -- Range of Seven segment displays
    VPRG_Pin  : GPIO_Pins := Gen0; -- selects Correction/Greyscale
    XLAT_Pin  : GPIO_Pins := Gen1; -- latches data, transfer when high
    Blank_Pin : GPIO_Pins := Gen2; -- resets grey scale counter, blanks LEDs
