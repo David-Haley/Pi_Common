@@ -20,7 +20,9 @@
 -- Last Edit : 15/10/2026
 
 --  20261015 : Finalize no longer raises an exception. Error messages include
---  the error reported by the C driver.
+--  the error reported by the C driver. Set_Character now stores the character
+--  for Get_Character. Write_Corrections restores VPRG and blanking if it
+--  fails and restarts any ambient light measurement.
 --  20260526 : Compiler warnings removed.
 --  20260329 : Provision for the display of the Latin_1 characters. All 
 --  characters valid, those not capable of display mapped to ' '.
@@ -289,13 +291,13 @@ package  body TLC5940 is
 
       -- Ambient light management subprograms
 
-      procedure AL_Initalise (Chip : in Chips;
+      procedure AL_Initialise (Chip : in Chips;
                               Channel : in LED_Channels;
                               Comparitor : in GPIO_Pins);
 
       function AL_Current_Result return Greyscales;
 
-      -- Seven segment -isplay management subprograms
+      -- Seven segment display management subprograms
 
       procedure Initialise_Digit (Display : in Display_7;
                                Chip : in Chips;
@@ -427,7 +429,7 @@ package  body TLC5940 is
       -- comparitor.
 
    begin -- Initialise_Ambient_Light
-      Display_State.AL_Initalise (Chip, Channel, Comparitor);
+      Display_State.AL_Initialise (Chip, Channel, Comparitor);
    end Initialise_Ambient_Light;
 
    function Get_Ambient_Light return Greyscales is
@@ -547,7 +549,8 @@ package  body TLC5940 is
          when 3 =>
             Result := Corrections (Shift_Right (First_Byte, 2));
          when others =>
-            null; -- should be unreachable
+            raise Program_Error with "Get_Correction erroneous case value!";
+            -- others need to keep the compiler happy
          end case; -- LED_Channel mod 4
          return Result;
       end Get_Correction;
@@ -632,6 +635,8 @@ package  body TLC5940 is
 
       begin -- Write_Corrections
          Corrections_Changed := True;
+         First_LED_Write := True;
+         -- Restart any ambient light measurement, corrections affect the bridge
          Write_Pin (Pin_High, VPRG_Pin); -- select dot correction SR
          for I in reverse Chips loop
             -- fiest chip in string, last sent!
@@ -653,6 +658,27 @@ package  body TLC5940 is
             -- Restore previous blanking state
          end if; -- not Is_Blanked
          Write_Pin (Pin_Low, VPRG_Pin); -- set back to greyscale;
+      exception
+         when others =>
+            -- Leaving VPRG high would cause the next Write_LEDs to load
+            -- greyscale data into the dot correction register. Each restore is
+            -- attempted independently so that the original exception is
+            -- propagated.
+            begin
+               Write_Pin (Pin_Low, VPRG_Pin);
+            exception
+               when others =>
+                  null;
+            end;
+            if not Is_Blanked then
+               begin
+                  Write_Pin (Pin_High, Blank_Pin);
+               exception
+                  when others =>
+                     null;
+               end;
+            end if; -- not Is_Blanked
+            raise;
       end Write_Corrections;
 
       procedure Write_LEDs is
@@ -716,19 +742,19 @@ package  body TLC5940 is
          return Is_Blanked;
       end Get_Blanking;
 
-      -- Ambient light mamagement subprograms
+      -- Ambient light management subprograms
 
-      procedure AL_Initalise (Chip : in Chips;
+      procedure AL_Initialise (Chip : in Chips;
                               Channel : in LED_Channels;
                               Comparitor : in GPIO_Pins) is
 
-      begin --  AL_Initalise
+      begin --  AL_Initialise
          Device := Chip;
          Output_Channel := Channel;
          Input_Pin := Comparitor;
          Bind_Pin (Input_Pin, In_Pin);
          Initialised := True;
-      end  AL_Initalise;
+      end  AL_Initialise;
 
       procedure AL_Write_LED is
 
@@ -792,6 +818,7 @@ package  body TLC5940 is
 
       begin -- Set_Character
          if Display_Buffer (Display).Initialised then
+            Display_Buffer (Display).Char := Char;
             for S in Segments range Segment_a .. Segment_g loop
                if Character_Map (Char, S) then
                   Set_Greyscale (Display_Buffer (Display).Chip,
